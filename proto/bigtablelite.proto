@@ -1,0 +1,39 @@
+syntax = "proto3";
+
+package bigtablelite;
+
+option go_package = "./proto";
+
+// BigTableLite service definition
+service BigTableLite {
+  // Set a key-value pair
+  rpc Set(SetRequest) returns (SetResponse);
+  
+  // Get a value by key
+  rpc Get(GetRequest) returns (GetResponse);
+}
+
+// Set request message
+message SetRequest {
+  string key = 1;
+  string value = 2;
+}
+
+// Set response message
+message SetResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+// Get request message
+message GetRequest {
+  string key = 1;
+}
+
+// Get response message
+message GetResponse {
+  bool found = 1;
+  string value = 2;
+  string message = 3;
+}
+
