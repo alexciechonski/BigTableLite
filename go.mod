@@ -1,4 +1,4 @@
-module bigtablelite
+module github.com/alexciechonski/BigTableLite
 
 go 1.23
 
