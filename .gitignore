@@ -1,1 +1,5 @@
 *.test
+
+# C++ build artifacts
+sstable/*.o
+sstable/*.a
