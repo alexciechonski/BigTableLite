@@ -2,7 +2,7 @@
 FROM golang:1.21-alpine AS builder
 
 # Install protobuf compiler
-RUN apk add --no-cache protobuf protoc-gen-go protoc-gen-go-grpc
+# RUN apk add --no-cache protobuf protoc-gen-go protoc-gen-go-grpc
 
 WORKDIR /app
 
