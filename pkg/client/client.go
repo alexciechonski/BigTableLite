@@ -7,7 +7,7 @@ import (
 	"log"
 	"time"
 
-	"bigtablelite/proto"
+	"https://github.com/alexciechonski/BigTableLite/proto"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
