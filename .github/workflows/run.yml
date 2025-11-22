@@ -1,66 +1,18 @@
-name: CI
+name: Go CI
 
 on:
   push:
-    branches: [main, master, '**']
+    branches: [main, master]
 
 jobs:
-  detect:
+  test:
     runs-on: ubuntu-latest
-    outputs:
-      node: ${{ steps.detect.outputs.node }}
-      go: ${{ steps.detect.outputs.go }}
-      python: ${{ steps.detect.outputs.python }}
-    steps:
-      - uses: actions/checkout@v4
-      - id: detect
-        run: |
-          node=false
-          go=false
-          python=false
-          [ -f package.json ] && node=true
-          [ -f go.mod ] && go=true
-          ([ -f pyproject.toml ] || [ -f requirements.txt ]) && python=true
-          echo "node=$node" >> $GITHUB_OUTPUT
-          echo "go=$go" >> $GITHUB_OUTPUT
-          echo "python=$python" >> $GITHUB_OUTPUT
 
-  node:
-    if: needs.detect.outputs.node == 'true'
-    needs: detect
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '18'
-      - run: npm ci
-      - run: npm test
-        env:
-          CI: true
-
-  go:
-    if: needs.detect.outputs.go == 'true'
-    needs: detect
-    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v4
         with:
-          go-version: '1.20'
-      - run: go test ./...
+          go-version: '1.23'
 
-  python:
-    if: needs.detect.outputs.python == 'true'
-    needs: detect
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v4
-        with:
-          python-version: '3.11'
-      - run: |
-          python -m pip install --upgrade pip
-          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
-          if [ -f pyproject.toml ] && ! [ -f requirements.txt ]; then pip install -e . || true; fi
-          pytest -q
+      - run: go mod tidy
+      - run: go test -v ./...
