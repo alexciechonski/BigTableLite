@@ -39,7 +39,8 @@ RUN CGO_ENABLED=1 GOOS=linux go build -v -o bigtablelite ./cmd/server
 
 # Runtime stage
 FROM alpine:latest
-RUN apk --no-cache add ca-certificates
+# Install C++ standard library runtime and libgcc (needed for cgo/C++ binary)
+RUN apk --no-cache add ca-certificates libstdc++ libgcc
 
 WORKDIR /root/
 
