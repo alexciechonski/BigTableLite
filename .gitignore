@@ -1,4 +1,5 @@
 *.test
+bigtablelite
 
 # C++ build artifacts
 sstable/*.o
