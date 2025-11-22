@@ -16,7 +16,7 @@ spec:
     spec:
       containers:
       - name: bigtablelite
-        image: bigtablelite:v2
+        image: bigtablelite:latest
         imagePullPolicy: Never
         ports:
         - containerPort: 50051

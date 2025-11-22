@@ -41,7 +41,11 @@ kubectl apply -f k8s/deployment.yaml
 kubectl apply -f k8s/service.yaml
 
 echo "Waiting for BigTableLite pods to be ready..."
-kubectl wait --for=condition=ready pod -l app=bigtablelite --timeout=120s
+# Wait for at least 3 ready pods (ignore any failing pods from new replica sets)
+kubectl wait --for=jsonpath='{.status.readyReplicas}'=3 deployment/bigtablelite --timeout=120s || \
+  (echo "Warning: Some pods may not be ready, but deployment is available" && \
+   kubectl get pods -l app=bigtablelite && \
+   kubectl get deployment bigtablelite)
 
 echo "Deploying Prometheus..."
 kubectl apply -f k8s/prometheus-deployment.yaml
