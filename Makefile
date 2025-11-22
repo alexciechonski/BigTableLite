@@ -1,4 +1,8 @@
-.PHONY: proto build docker-build docker-run test clean
+.PHONY: proto build docker-build docker-run test clean sstable-lib
+
+# Build C++ SSTable library
+sstable-lib:
+	$(MAKE) -C sstable
 
 # Generate protobuf code
 proto:
@@ -7,16 +11,20 @@ proto:
 		proto/bigtablelite.proto
 
 # Build the application
-build: proto
-	go build -o bigtablelite .
+build: sstable-lib proto
+	CGO_ENABLED=1 go build -o bigtablelite ./cmd/server
 
 # Build Docker image
 docker-build:
 	docker build -t bigtablelite:latest .
 
-# Run locally (requires Redis on localhost:6379)
+# Run locally with SSTable backend (default)
 run: build
-	./bigtablelite -redis-addr localhost:6379
+	./bigtablelite
+
+# Run locally with Redis backend
+run-redis: build
+	./bigtablelite -use-redis -redis-addr localhost:6379
 
 # Run tests
 test:
@@ -25,7 +33,8 @@ test:
 # Clean build artifacts
 clean:
 	rm -f bigtablelite
-	rm -rf proto/*.pb.go
+	# Note: proto/*.pb.go files are not removed - regenerate with 'make proto' if needed
+	$(MAKE) -C sstable clean
 
 # Install dependencies
 deps:

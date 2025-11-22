@@ -12,6 +12,7 @@ import (
 	"syscall"
 	"time"
 
+	"bigtablelite/pkg/storage"
 	"bigtablelite/proto"
 
 	"github.com/prometheus/client_golang/prometheus"
@@ -56,11 +57,26 @@ func getEnv(key, defaultValue string) string {
 // BigTableLiteServer implements the gRPC service
 type BigTableLiteServer struct {
 	proto.UnimplementedBigTableLiteServer
-	redisClient *redis.Client
+	storageEngine *storage.SSTableEngine
+	redisClient   *redis.Client
+	useRedis      bool
 }
 
-// NewBigTableLiteServer creates a new server instance
-func NewBigTableLiteServer(redisAddr string) (*BigTableLiteServer, error) {
+// NewBigTableLiteServer creates a new server instance with SSTable engine
+func NewBigTableLiteServer(dataDir string) (*BigTableLiteServer, error) {
+	engine, err := storage.NewSSTableEngine(dataDir)
+	if err != nil {
+		return nil, fmt.Errorf("failed to initialize SSTable engine: %w", err)
+	}
+
+	return &BigTableLiteServer{
+		storageEngine: engine,
+		useRedis:      false,
+	}, nil
+}
+
+// NewBigTableLiteServerWithRedis creates a new server instance with Redis backend
+func NewBigTableLiteServerWithRedis(redisAddr string) (*BigTableLiteServer, error) {
 	rdb := redis.NewClient(&redis.Options{
 		Addr:     redisAddr,
 		Password: "", // no password set
@@ -76,10 +92,11 @@ func NewBigTableLiteServer(redisAddr string) (*BigTableLiteServer, error) {
 
 	return &BigTableLiteServer{
 		redisClient: rdb,
+		useRedis:    true,
 	}, nil
 }
 
-// Set stores a key-value pair in Redis
+// Set stores a key-value pair
 func (s *BigTableLiteServer) Set(ctx context.Context, req *proto.SetRequest) (*proto.SetResponse, error) {
 	start := time.Now()
 	defer func() {
@@ -87,7 +104,13 @@ func (s *BigTableLiteServer) Set(ctx context.Context, req *proto.SetRequest) (*p
 		requestLatency.WithLabelValues("Set").Observe(duration)
 	}()
 
-	err := s.redisClient.Set(ctx, req.Key, req.Value, 0).Err()
+	var err error
+	if s.useRedis {
+		err = s.redisClient.Set(ctx, req.Key, req.Value, 0).Err()
+	} else {
+		err = s.storageEngine.Put(req.Key, req.Value)
+	}
+
 	if err != nil {
 		requestCount.WithLabelValues("Set", "error").Inc()
 		return &proto.SetResponse{
@@ -103,7 +126,7 @@ func (s *BigTableLiteServer) Set(ctx context.Context, req *proto.SetRequest) (*p
 	}, nil
 }
 
-// Get retrieves a value by key from Redis
+// Get retrieves a value by key
 func (s *BigTableLiteServer) Get(ctx context.Context, req *proto.GetRequest) (*proto.GetResponse, error) {
 	start := time.Now()
 	defer func() {
@@ -111,21 +134,46 @@ func (s *BigTableLiteServer) Get(ctx context.Context, req *proto.GetRequest) (*p
 		requestLatency.WithLabelValues("Get").Observe(duration)
 	}()
 
-	val, err := s.redisClient.Get(ctx, req.Key).Result()
-	if err == redis.Nil {
-		requestCount.WithLabelValues("Get", "not_found").Inc()
-		return &proto.GetResponse{
-			Found:   false,
-			Value:   "",
-			Message: "Key not found",
-		}, nil
-	} else if err != nil {
-		requestCount.WithLabelValues("Get", "error").Inc()
-		return &proto.GetResponse{
-			Found:   false,
-			Value:   "",
-			Message: fmt.Sprintf("Failed to get key: %v", err),
-		}, nil
+	var val string
+	var found bool
+	var err error
+
+	if s.useRedis {
+		val, err = s.redisClient.Get(ctx, req.Key).Result()
+		if err == redis.Nil {
+			requestCount.WithLabelValues("Get", "not_found").Inc()
+			return &proto.GetResponse{
+				Found:   false,
+				Value:   "",
+				Message: "Key not found",
+			}, nil
+		} else if err != nil {
+			requestCount.WithLabelValues("Get", "error").Inc()
+			return &proto.GetResponse{
+				Found:   false,
+				Value:   "",
+				Message: fmt.Sprintf("Failed to get key: %v", err),
+			}, nil
+		}
+		found = true
+	} else {
+		val, found, err = s.storageEngine.Get(req.Key)
+		if err != nil {
+			requestCount.WithLabelValues("Get", "error").Inc()
+			return &proto.GetResponse{
+				Found:   false,
+				Value:   "",
+				Message: fmt.Sprintf("Failed to get key: %v", err),
+			}, nil
+		}
+		if !found {
+			requestCount.WithLabelValues("Get", "not_found").Inc()
+			return &proto.GetResponse{
+				Found:   false,
+				Value:   "",
+				Message: "Key not found",
+			}, nil
+		}
 	}
 
 	requestCount.WithLabelValues("Get", "success").Inc()
@@ -140,11 +188,21 @@ func main() {
 	// Support environment variables with flag defaults
 	grpcPort := flag.String("grpc-port", getEnv("GRPC_PORT", "50051"), "gRPC server port")
 	metricsPort := flag.String("metrics-port", getEnv("METRICS_PORT", "9090"), "Prometheus metrics port")
-	redisAddr := flag.String("redis-addr", getEnv("REDIS_ADDR", "localhost:6379"), "Redis address")
+	dataDir := flag.String("data-dir", getEnv("DATA_DIR", "./data"), "Data directory for SSTable storage")
+	useRedis := flag.Bool("use-redis", false, "Use Redis backend instead of SSTable")
+	redisAddr := flag.String("redis-addr", getEnv("REDIS_ADDR", "localhost:6379"), "Redis address (only used with --use-redis)")
 	flag.Parse()
 
 	// Create server instance
-	server, err := NewBigTableLiteServer(*redisAddr)
+	var server *BigTableLiteServer
+	var err error
+	if *useRedis {
+		log.Println("Using Redis backend")
+		server, err = NewBigTableLiteServerWithRedis(*redisAddr)
+	} else {
+		log.Printf("Using SSTable backend with data directory: %s", *dataDir)
+		server, err = NewBigTableLiteServer(*dataDir)
+	}
 	if err != nil {
 		log.Fatalf("Failed to create server: %v", err)
 	}

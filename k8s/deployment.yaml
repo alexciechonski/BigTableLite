@@ -17,15 +17,21 @@ spec:
       containers:
       - name: bigtablelite
         image: bigtablelite:latest
-        imagePullPolicy: IfNotPresent
+        imagePullPolicy: Never
         ports:
         - containerPort: 50051
           name: grpc
         - containerPort: 9090
           name: metrics
         env:
-        - name: REDIS_ADDR
-          value: "redis-service:6379"
+        - name: DATA_DIR
+          value: "/data"
+        # Uncomment to use Redis backend instead of SSTable:
+        # - name: REDIS_ADDR
+        #   value: "redis-service:6379"
+        # - name: USE_REDIS
+        #   value: "true"
+        # Note: Using CMD from Dockerfile which includes -data-dir /data
         livenessProbe:
           httpGet:
             path: /metrics
@@ -42,11 +48,17 @@ spec:
           periodSeconds: 5
           timeoutSeconds: 3
           failureThreshold: 3
+        volumeMounts:
+        - name: data
+          mountPath: /data
         resources:
           requests:
-            memory: "64Mi"
+            memory: "128Mi"
             cpu: "100m"
           limits:
-            memory: "128Mi"
+            memory: "256Mi"
             cpu: "200m"
+      volumes:
+      - name: data
+        emptyDir: {}
 
