@@ -22,10 +22,10 @@ RUN protoc --go_out=. --go_opt=paths=source_relative \
     proto/bigtablelite.proto
 
 # Copy C++ source files
-COPY cpp/ ./cpp/
+COPY sstable/ ./sstable/
 
 # Build C++ SSTable library first
-RUN make -C cpp
+RUN make -C sstable
 
 # Copy rest of the project
 COPY . .

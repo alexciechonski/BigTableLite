@@ -1,9 +1,9 @@
 package storage
 
 /*
-#cgo CXXFLAGS: -std=c++11 -I../../cpp
-#cgo LDFLAGS: -L../../cpp -lsstable -lstdc++
-#include "../../cpp/sstable.h"
+#cgo CXXFLAGS: -std=c++11 -I../../sstable
+#cgo LDFLAGS: -L../../sstable -lsstable -lstdc++
+#include "../../sstable/sstable.h"
 #include <stdlib.h>
 */
 import "C"

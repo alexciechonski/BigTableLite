@@ -14,7 +14,7 @@ The SSTable engine consists of:
 ## File Structure
 
 ```
-cpp/
+sstable/
   ├── sstable.cpp    # C++ implementation
   ├── sstable.h      # C API header
   └── Makefile       # Build static library
@@ -44,7 +44,7 @@ Each SSTable file contains:
 make build
 
 # Or manually:
-cd cpp && make
+cd sstable && make
 cd .. && CGO_ENABLED=1 go build -o bigtablelite ./cmd/server
 ```
 

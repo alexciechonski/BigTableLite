@@ -1,8 +1,8 @@
-.PHONY: proto build docker-build docker-run test clean cpp-lib
+.PHONY: proto build docker-build docker-run test clean sstable-lib
 
 # Build C++ SSTable library
-cpp-lib:
-	$(MAKE) -C cpp
+sstable-lib:
+	$(MAKE) -C sstable
 
 # Generate protobuf code
 proto:
@@ -11,7 +11,7 @@ proto:
 		proto/bigtablelite.proto
 
 # Build the application
-build: cpp-lib proto
+build: sstable-lib proto
 	CGO_ENABLED=1 go build -o bigtablelite ./cmd/server
 
 # Build Docker image
@@ -34,7 +34,7 @@ test:
 clean:
 	rm -f bigtablelite
 	# Note: proto/*.pb.go files are not removed - regenerate with 'make proto' if needed
-	$(MAKE) -C cpp clean
+	$(MAKE) -C sstable clean
 
 # Install dependencies
 deps:
