@@ -1,0 +1,52 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: bigtablelite
+  labels:
+    app: bigtablelite
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: bigtablelite
+  template:
+    metadata:
+      labels:
+        app: bigtablelite
+    spec:
+      containers:
+      - name: bigtablelite
+        image: bigtablelite:latest
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 50051
+          name: grpc
+        - containerPort: 9090
+          name: metrics
+        env:
+        - name: REDIS_ADDR
+          value: "redis-service:6379"
+        livenessProbe:
+          httpGet:
+            path: /metrics
+            port: 9090
+          initialDelaySeconds: 10
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /metrics
+            port: 9090
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 3
+        resources:
+          requests:
+            memory: "64Mi"
+            cpu: "100m"
+          limits:
+            memory: "128Mi"
+            cpu: "200m"
+
