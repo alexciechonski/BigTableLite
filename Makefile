@@ -20,7 +20,7 @@ run: build
 
 # Run tests
 test:
-	go test ./...
+	go test -v -race -cover ./...
 
 # Clean build artifacts
 clean:
