@@ -247,25 +247,6 @@ curl http://localhost:9090/metrics
    - Request latency (p50, p95, p99)
    - Error rate
 
-## Project Structure
-
-```
-BigTableLite/
-├── proto/
-│   └── bigtablelite.proto      # gRPC service definition
-├── k8s/
-│   ├── deployment.yaml          # BigTableLite deployment
-│   ├── service.yaml             # BigTableLite service
-│   ├── redis-deployment.yaml    # Redis deployment
-│   ├── prometheus-deployment.yaml
-│   └── grafana-deployment.yaml
-├── main.go                      # Main application
-├── go.mod                       # Go dependencies
-├── Dockerfile                   # Docker build config
-├── Makefile                     # Build automation
-└── README.md                    # This file
-```
-
 ## Configuration
 
 The service accepts the following command-line flags:
