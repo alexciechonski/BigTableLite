@@ -1,8 +1,8 @@
 package storage
 
 /*
-#cgo CXXFLAGS: -std=c++11 -I../../sstable
-#cgo LDFLAGS: -L../../sstable -lsstable -lstdc++
+#cgo CXXFLAGS: -std=c++11 -I${SRCDIR}/../../sstable
+#cgo LDFLAGS: -L${SRCDIR}/../../sstable -lsstable -lstdc++
 #include "../../sstable/sstable.h"
 #include <stdlib.h>
 */

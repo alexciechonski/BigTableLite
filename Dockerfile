@@ -21,17 +21,21 @@ RUN protoc --go_out=. --go_opt=paths=source_relative \
     --go-grpc_out=. --go-grpc_opt=paths=source_relative \
     proto/bigtablelite.proto
 
-# Copy C++ source files
-COPY sstable/ ./sstable/
-
-# Build C++ SSTable library first
-RUN make -C sstable
-
-# Copy rest of the project
+# Copy entire project (needed for proper ${SRCDIR} resolution in cgo)
 COPY . .
 
+# Build C++ SSTable library for Linux
+RUN make -C sstable clean && make -C sstable
+
+# Verify library was built and contains expected symbols
+RUN ls -la sstable/*.a && \
+    nm sstable/libsstable.a | grep -E "(sstable_init|sstable_put|sstable_get)" && \
+    file sstable/libsstable.a
+
 # Build Go binary (cgo must be enabled!)
-RUN CGO_ENABLED=1 GOOS=linux go build -o bigtablelite ./cmd/server
+# ${SRCDIR} in cgo directives will resolve to /app/pkg/storage
+# From pkg/storage, ../../sstable resolves to /app/sstable
+RUN CGO_ENABLED=1 GOOS=linux go build -v -o bigtablelite ./cmd/server
 
 # Runtime stage
 FROM alpine:latest

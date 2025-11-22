@@ -29,6 +29,12 @@ spec:
         # Uncomment to use Redis backend instead of SSTable:
         # - name: REDIS_ADDR
         #   value: "redis-service:6379"
+        # - name: USE_REDIS
+        #   value: "true"
+        command: ["./bigtablelite"]
+        args:
+        - "-data-dir"
+        - "/data"
         livenessProbe:
           httpGet:
             path: /metrics
