@@ -12,8 +12,8 @@ import (
 	"syscall"
 	"time"
 
-	"bigtablelite/pkg/storage"
-	"bigtablelite/proto"
+	"https://github.com/alexciechonski/BigTableLite/pkg/storage"
+	"https://github.com/alexciechonski/BigTableLite/proto"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
