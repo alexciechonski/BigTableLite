@@ -14,6 +14,15 @@ jobs:
       - uses: actions/setup-go@v4
         with:
           go-version: '1.23'
+      
+      # Install GCC for building C++ code
+      - name: Install system compiler
+        run: sudo apt-get update && sudo apt-get install -y build-essential
 
-      - run: go mod tidy
-      - run: go test -v ./...
+      # Build the C++ library before running the Go tests
+      - name: Build C++ SSTable static library
+        run: make -C sstable
+
+      - name: Run tests
+        run: go mod tidy
+        run: go test -v ./...
