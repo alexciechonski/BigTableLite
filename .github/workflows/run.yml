@@ -21,9 +21,9 @@ jobs:
       - name: Build C++ SSTable static library
         run: make -C sstable
 
-      - name: Start Redis
-        run: |
-          docker run -d -p 6379:6379 --name redis redis:7
+      # - name: Start Redis
+      #   run: |
+      #     docker run -d -p 6379:6379 --name redis redis:7
 
       - name: Tidy modules
         run: go mod tidy

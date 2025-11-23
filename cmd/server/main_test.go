@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/alexciechonski/BigTableLite/proto"
-
+	"github.com/go-redis/redismock/v9"
 	"github.com/redis/go-redis/v9"
 )
 
@@ -37,6 +37,11 @@ func setupTestRedis(t *testing.T) *redis.Client {
 	rdb.FlushDB(ctx)
 
 	return rdb
+}
+
+func MockRedis(t *testing.T) (*redis.Client, redismock.ClientMock) {
+    db, mock := redismock.NewClientMock()
+    return db, mock
 }
 
 func TestGetEnv(t *testing.T) {
@@ -115,10 +120,26 @@ func TestNewBigTableLiteServer(t *testing.T) {
 }
 
 func TestSet(t *testing.T) {
-	rdb := setupTestRedis(t)
-	server := &BigTableLiteServer{
-		redisClient: rdb,
-	}
+	var (
+        rdb    *redis.Client
+        mock   redismock.ClientMock
+    )
+
+    if os.Getenv("GITHUB_ACTIONS") == "true" {
+        // CI → use mock
+        rdb, mock = MockRedis(t)
+
+        // define expected Redis behavior for the test
+        mock.ExpectSet("test-key-1", "test-value-1", 0).SetVal("OK")
+
+    } else {
+        // Local dev → use real Redis if running
+        rdb = setupTestRedis(t)
+    }
+
+    server := &BigTableLiteServer{
+        redisClient: rdb,
+    }
 
 	ctx := context.Background()
 
