@@ -15,13 +15,15 @@ jobs:
         with:
           go-version: '1.23'
       
-      # Install GCC for building C++ code
       - name: Install system compiler
         run: sudo apt-get update && sudo apt-get install -y build-essential
 
-      # Build the C++ library before running the Go tests
       - name: Build C++ SSTable static library
         run: make -C sstable
+
+      - name: Start Redis
+        run: |
+          docker run -d -p 6379:6379 --name redis redis:7
 
       - name: Tidy modules
         run: go mod tidy
