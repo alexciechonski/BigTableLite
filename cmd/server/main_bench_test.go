@@ -1,9 +1,16 @@
 package main
 
-func BenchmarkRedisSet(b *testing.B) {
+import (
+    "context"
+    "testing"
 
-	// Setup Redis client
-	ctx := context.Background()
+    "github.com/redis/go-redis/v9"
+    "github.com/alexciechonski/BigTableLite/proto"
+)
+
+func BenchmarkRedisSet(b *testing.B) {
+    ctx := context.Background()
+
     rdb := redis.NewClient(&redis.Options{
         Addr: "localhost:6379",
     })
@@ -18,14 +25,16 @@ func BenchmarkRedisSet(b *testing.B) {
         Value: "bench-value",
     }
 
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+    b.ResetTimer()
+
+    for i := 0; i < b.N; i++ {
         server.Set(ctx, req)
-	}
+    }
 }
 
 func BenchmarkRedisDirectSet(b *testing.B) {
     ctx := context.Background()
+
     rdb := redis.NewClient(&redis.Options{
         Addr: "localhost:6379",
     })
