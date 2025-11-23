@@ -30,3 +30,6 @@ jobs:
 
       - name: Run tests
         run: go test -v ./...
+
+      - name: Run benchmarks
+        run: go test -bench=. -benchtime=3s -run=^$ ./...
