@@ -23,6 +23,8 @@ jobs:
       - name: Build C++ SSTable static library
         run: make -C sstable
 
-      - name: Run tests
+      - name: Tidy modules
         run: go mod tidy
+
+      - name: Run tests
         run: go test -v ./...
