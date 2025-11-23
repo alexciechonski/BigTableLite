@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"bigtablelite/proto"
+	"github.com/alexciechonski/BigTableLite/proto"
 
 	"github.com/redis/go-redis/v9"
 )
