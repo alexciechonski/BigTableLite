@@ -46,8 +46,8 @@ In another terminal:
 
 ```bash
 # Using the example client
-go run examples/client.go -op set -key hello -value world
-go run examples/client.go -op get -key hello
+go run pkg/client/client.go -op set -key hello -value world
+go run pkg/client/client.go -op get -key hello
 
 # Or using grpcurl
 grpcurl -plaintext -d '{"key": "test", "value": "hello"}' \

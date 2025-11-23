@@ -39,6 +39,22 @@ var (
 		},
 		[]string{"method"},
 	)
+
+	errorCounts = prometheus.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "bigtablelite_errors_total",
+			Help: "Total number of errors by method",
+		},
+		[]string{"method", "type"},
+	)
+
+	activeRequests = prometheus.NewGaugeVec(
+		prometheus.GaugeOpts{
+			Name: "bigtablelite_active_requests",
+			Help: "Number of in-flight requests",
+		},
+		[]string{"method"},
+	)
 )
 
 func init() {
