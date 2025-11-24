@@ -18,42 +18,24 @@ data:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: prometheus
-  labels:
-    app: prometheus
+  name: bigtablelite
 spec:
-  replicas: 1
   selector:
     matchLabels:
-      app: prometheus
+      app: bigtablelite
   template:
     metadata:
       labels:
-        app: prometheus
+        app: bigtablelite
     spec:
       containers:
-      - name: prometheus
-        image: prom/prometheus:latest
+      - name: bigtablelite
+        image: bigtablelite:latest
+        imagePullPolicy: Never
         ports:
-        - containerPort: 9090
-          name: prometheus
-        args:
-          - '--config.file=/etc/prometheus/prometheus.yml'
-          - '--storage.tsdb.path=/prometheus'
-        volumeMounts:
-        - name: prometheus-config
-          mountPath: /etc/prometheus
-        resources:
-          requests:
-            memory: "256Mi"
-            cpu: "200m"
-          limits:
-            memory: "512Mi"
-            cpu: "500m"
-      volumes:
-      - name: prometheus-config
-        configMap:
-          name: prometheus-config
+          - containerPort: 50051
+          - containerPort: 9090
+
 ---
 apiVersion: v1
 kind: Service
