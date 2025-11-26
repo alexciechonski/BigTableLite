@@ -5,12 +5,12 @@ metadata:
   labels:
     app: bigtablelite
 spec:
-  type: ClusterIP
-  ports:
-  - port: 50051
-    targetPort: 50051
-    protocol: TCP
-    name: grpc
   selector:
-    app: bigtablelite
-
+    app: bigtablelite               
+  ports:
+    - name: grpc
+      port: 50051
+      targetPort: 50051
+    - name: metrics
+      port: 9090
+      targetPort: 9090

@@ -1,113 +1,118 @@
-# Quick Start Guide
+BigTableLite — Full Quick Start & Kubernetes Guide
 
-## Prerequisites Check
+Prerequisites
 
-```bash
-# Check Go version (need 1.21+)
-go version
+    go version          # Go 1.21+
+    docker --version
+    kubectl version --client
+    minikube version    # or kind version
 
-# Check Docker
-docker --version
+------------------------------------------------------------------------
 
-# Check Kubernetes (Minikube or Kind)
-kubectl version --client
-minikube version  # or: kind version
-```
+Local Development
 
-## Local Development
+1. Install Dependencies
 
-### 1. Install Dependencies
+    make deps
 
-```bash
-make deps
-```
+2. Generate Protobuf Code
 
-### 2. Generate Protobuf Code
+    make proto
 
-```bash
-make proto
-```
+3. Start Redis (optional unless using Redis backend)
 
-### 3. Start Redis
+    docker run -d -p 6379:6379 --name redis redis:7-alpine
 
-```bash
-docker run -d -p 6379:6379 --name redis redis:7-alpine
-```
+4. Run the Service Locally
 
-### 4. Run the Service
+    make run
 
-```bash
-make run
-```
+5. Test Using Client
 
-### 5. Test the API
+    go run pkg/client/client.go -op set -key hello -value world
+    go run pkg/client/client.go -op get -key hello
 
-In another terminal:
+6. Check Metrics
 
-```bash
-# Using the example client
-go run examples/client.go -op set -key hello -value world
-go run examples/client.go -op get -key hello
+    curl http://localhost:9090/metrics
 
-# Or using grpcurl
-grpcurl -plaintext -d '{"key": "test", "value": "hello"}' \
-  localhost:50051 bigtablelite.BigTableLite/Set
+------------------------------------------------------------------------
 
-grpcurl -plaintext -d '{"key": "test"}' \
-  localhost:50051 bigtablelite.BigTableLite/Get
-```
+Kubernetes Deployment Guide
 
-### 6. Check Metrics
+IMPORTANT: Build Image Inside Minikube
 
-```bash
-curl http://localhost:9090/metrics
-```
+    eval $(minikube -p minikube docker-env)
+    docker build -t bigtablelite:latest .
 
-## Kubernetes Deployment
+1. Apply Redis
 
-### Option 1: Using the Deployment Script
+    kubectl apply -f k8s/redis-deployment.yaml
 
-```bash
-# Start your cluster first
-minikube start
-# or
-kind create cluster
+2. Deploy BigTableLite
 
-# Deploy everything
-./deploy.sh
-```
+    kubectl apply -f k8s/bigtable-deployment.yaml
+    kubectl apply -f k8s/bigtable-service.yaml
 
-### Option 2: Manual Deployment
+3. Deploy Prometheus & Grafana
 
-```bash
-# 1. Build and load image
-docker build -t bigtablelite:latest .
-minikube image load bigtablelite:latest  # or: kind load docker-image bigtablelite:latest
+    kubectl apply -f k8s/prometheus-deployment.yaml
+    kubectl apply -f k8s/grafana-deployment.yaml
 
-# 2. Deploy Redis
-kubectl apply -f k8s/redis-deployment.yaml
+------------------------------------------------------------------------
 
-# 3. Deploy BigTableLite
-kubectl apply -f k8s/deployment.yaml
-kubectl apply -f k8s/service.yaml
+Verifying Deployment
 
-# 4. Deploy monitoring (optional)
-kubectl apply -f k8s/prometheus-deployment.yaml
-kubectl apply -f k8s/grafana-deployment.yaml
+    kubectl get pods
+    kubectl get svc
 
-# 5. Check status
-kubectl get pods
-kubectl get svc
-```
+------------------------------------------------------------------------
 
-### Access Services
+Accessing Services
 
-```bash
-# Port forward to access locally
-kubectl port-forward svc/bigtablelite-service 50051:50051
-kubectl port-forward svc/prometheus-service 9090:9090
-kubectl port-forward svc/grafana-service 3000:3000
+gRPC API
 
-# Or with Minikube
-minikube service bigtablelite-service
-```
+    kubectl port-forward svc/bigtablelite-service 50051:50051
+
+Prometheus
+
+    kubectl port-forward svc/prometheus-service 9090:9090
+    open http://localhost:9090/targets
+
+Grafana
+
+    kubectl port-forward svc/grafana-service 3000:3000
+    open http://localhost:3000
+    # Default password: admin / admin
+
+------------------------------------------------------------------------
+
+Troubleshooting Guide
+
+1. Verify Service Exposes Both Ports
+
+    kubectl get svc bigtablelite-service -o yaml
+
+Expected:
+
+    ports:
+      - name: grpc
+        port: 50051
+      - name: metrics
+        port: 9090
+
+2. Verify Deployment Exposes containerPort 9090
+
+    ports:
+      - containerPort: 50051
+      - containerPort: 9090
+
+3. Check Endpoints
+
+    kubectl get endpoints bigtablelite-service -o yaml
+
+Must contain both ports.
+
+4. If port-forward stops working, restart:
+
+    kubectl port-forward svc/bigtablelite-service 50051:50051
