@@ -9,8 +9,8 @@ spec:
     app: bigtablelite               
   ports:
     - name: grpc
-      port: 50051                  # Cluster-facing port
-      targetPort: 50051            # Container port
+      port: 50051
+      targetPort: 50051
     - name: metrics
-      port: 9090                   
+      port: 9090
       targetPort: 9090
