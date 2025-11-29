@@ -40,8 +40,8 @@ func (wal *WriteAheadLog) Close() error {
 	if wal.file == nil {
 		return nil
 	}
-	close(wal.stopCh)
 	wal.file.Sync()
+	close(wal.stopCh)
 	wal.file.Close()
 	wal.file = nil
 	return nil
