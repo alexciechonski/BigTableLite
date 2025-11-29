@@ -37,6 +37,18 @@ func NewSSTableEngine(dataDir string) (*SSTableEngine, error) {
     }
     engine.wal = w
 
+	// Initialize SSTable system (C++)
+	cDataDir := C.CString(dataDir)
+	defer C.free(unsafe.Pointer(cDataDir))
+	
+	success := C.sstable_init(cDataDir)
+	if !success {
+		return nil, errors.New("failed to initialize SSTable engine")
+	}
+	
+	engine.initialized = true
+	return engine, nil
+
 	// replay on startup
 	err = engine.wal.Replay(func(entry []byte) error {
 		_, _, op, key, value, err := wal.DeserializeOperation(entry)
@@ -58,18 +70,6 @@ func NewSSTableEngine(dataDir string) (*SSTableEngine, error) {
 	if err != nil {
 		return nil, fmt.Errorf("WAL replay failed: %w", err)
 	}
-
-	// Initialize SSTable system (C++)
-	cDataDir := C.CString(dataDir)
-	defer C.free(unsafe.Pointer(cDataDir))
-	
-	success := C.sstable_init(cDataDir)
-	if !success {
-		return nil, errors.New("failed to initialize SSTable engine")
-	}
-	
-	engine.initialized = true
-	return engine, nil
 }
 
 // Put stores a key-value pair in the memtable
