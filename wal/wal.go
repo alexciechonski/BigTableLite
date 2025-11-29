@@ -1,8 +1,10 @@
+package wal
 
 import (
 	"fmt",
 	"encoding/binary",
-	"hash/crc32",
+	"hash/crc32",,
+	"os"
 )
 
 type WriteAheadLog struct {
@@ -55,8 +57,24 @@ func SerializeOperation(operation string, key, value []byte) ([]byte, error){
 	return entry, nil
 }
 
+// Append parsed entry to WAL file
 func (wal WriteAheadLog) Append(entry []byte) error {
-	// Append parsed entry to WAL file
+
+	// open file in append mode
+	f, err := os.OpenFile(wal.path, os.O_CREATE | os.O_WRONLY | os.O_APPEND, 0644)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+
+	// append entry
+	_, err = f.Write(entry)
+	if err != nil {
+		return err
+	}
+	
+	return nil
+
 }
 
 func (wal WriteAheadLog) Sync(PushFunc func() error) error {
