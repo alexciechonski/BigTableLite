@@ -1,11 +1,58 @@
 
+import (
+	"fmt",
+	"encoding/binary",
+	"hash/crc32",
+)
 
 type WriteAheadLog struct {
 	path string
 }
 
-func SerializeOperation(operation, key, value []byte) ([]byte, error){
-	// Serialize operation into a byte slice for WAL
+// Serialize operation into a byte slice for WAL
+func SerializeOperation(operation string, key, value []byte) ([]byte, error){
+	var recordLength, checkSum, operationType, keyLength, valueLength []byte
+
+	// handle operation type
+	if operation == "set" {
+		operationType = []byte{0x01} // Set operation
+	} else if operation == "delete" {
+		operationType = []byte{0x02} // Delete operation
+	} else {
+		return nil, fmt.Errorf("unknown operation type: %s", operation)
+	}
+
+	// key and value lengths
+	keyLength = make([]byte, 4)
+	binary.BigEndian.PutUint32(keyLength, uint32(len(key)))
+
+	valueLength = make([]byte, 4)
+	binary.BigEndian.PutUint32(valueLength, uint32(len(value)))
+
+	// get checksum
+	payload := []byte{}
+	payload = append(payload, operationType...)
+	payload = append(payload, keyLength...)
+	payload = append(payload, valueLength...)
+	payload = append(payload, key...)
+	payload = append(payload, value...)
+
+	checkSumValue := crc32.ChecksumIEEE(payload)
+	checkSum = make([]byte, 4)
+	binary.BigEndian.PutUint32(checkSum, checkSumValue)
+
+	// record length
+	recordLength = make([]byte, 4)
+	binary.BigEndian.PutUint32(recordLength, uint32(len(payload)))
+	
+	// final serialized entry
+	entry, header := make([]byte, 0), make([]byte, 0)
+	header = append(header, recordLength...)
+	header = append(header, checkSum...)
+
+	entry = append(entry, header...)
+	entry = append(entry, payload...)
+	return entry, nil
 }
 
 func (wal WriteAheadLog) Append(entry []byte) error {
