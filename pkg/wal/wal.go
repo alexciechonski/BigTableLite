@@ -149,8 +149,8 @@ func (wal *WriteAheadLog) Sync() error {
 }
 
 // Replay WAL entries by calling ProcessFunc for each entry
-func (wal WriteAheadLog) Replay(ProcessFunc func(entry []byte) error) error {
-	wal.mu.Lock()
+func (wal *WriteAheadLog) Replay(ProcessFunc func(entry []byte) error) error {
+    wal.mu.Lock()
     defer wal.mu.Unlock()
 
     f, err := os.Open(wal.path)
@@ -160,7 +160,6 @@ func (wal WriteAheadLog) Replay(ProcessFunc func(entry []byte) error) error {
     defer f.Close()
 
     for {
-        // Read header: 8 bytes
         header := make([]byte, 8)
         _, err := io.ReadFull(f, header)
 
@@ -168,33 +167,21 @@ func (wal WriteAheadLog) Replay(ProcessFunc func(entry []byte) error) error {
             return nil
         }
         if err != nil {
-            // partial header ->  corrupted tail -> stop replay quietly
-            return nil
+            return nil // corrupted tail
         }
 
-        // Parse recordLength from header
-        recordLength := binary.BigEndian.Uint32(header[0:4])
-
-        // Read payload
+        recordLength := binary.BigEndian.Uint32(header[:4])
         payload := make([]byte, recordLength)
-        _, err = io.ReadFull(f, payload)
 
+        _, err = io.ReadFull(f, payload)
         if err != nil {
-            // corrupted tail
-            return nil
+            return nil // corrupted tail
         }
 
-        // Build full entry for your Deserialize
         entry := append(header, payload...)
 
-        // Deserialize FULL record 
-        _, _, operation, key, value, err := DeserializeOperation(entry)
-        if err != nil {
-            // corrupted record
-            return nil
-        }
-
-        if err := ProcessFunc(operation, key, value); err != nil {
+        // JUST pass entry — not operation, key, value
+        if err := ProcessFunc(entry); err != nil {
             return err
         }
     }

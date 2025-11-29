@@ -39,7 +39,7 @@ func NewSSTableEngine(dataDir string) (*SSTableEngine, error) {
 
 	// replay on startup
 	err = engine.wal.Replay(func(entry []byte) error {
-		recordLength, checksum, op, key, value, err := wal.DeserializeOperation(entry)
+		_, _, op, key, value, err := wal.DeserializeOperation(entry)
 		if err != nil {
 			return err
 		}
