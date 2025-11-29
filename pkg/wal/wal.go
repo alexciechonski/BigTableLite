@@ -6,13 +6,15 @@ import (
 	"hash/crc32"
 	"os"
 	"sync"
-	"bufio"
+	"time"
+	"io"
 )
 
 type WriteAheadLog struct {
 	path string
 	file *os.File
     mu   sync.Mutex
+	stopCh chan struct{}
 }
 
 func NewWal(path string) (*WriteAheadLog, error) {
@@ -26,6 +28,9 @@ func NewWal(path string) (*WriteAheadLog, error) {
     }
 
     wal.file = f
+
+	wal.startBackgroundSync(100 * time.Millisecond)
+
     return wal, nil
 }
 
@@ -35,6 +40,7 @@ func (wal *WriteAheadLog) Close() error {
 	if wal.file == nil {
 		return nil
 	}
+	close(wal.stopCh)
 	wal.file.Sync()
 	wal.file.Close()
 	wal.file = nil
@@ -192,5 +198,27 @@ func (wal WriteAheadLog) Replay(ProcessFunc func(entry []byte) error) error {
             return err
         }
     }
-	
 }
+
+func (wal *WriteAheadLog) Path() string {
+	return wal.path
+}	
+
+func (wal *WriteAheadLog) startBackgroundSync(interval time.Duration) {
+    wal.stopCh = make(chan struct{})
+
+    go func() {
+        ticker := time.NewTicker(interval)
+        defer ticker.Stop()
+
+        for {
+            select {
+            case <-ticker.C:
+                wal.Sync()
+            case <-wal.stopCh:
+                return
+            }
+        }
+    }()
+}
+
