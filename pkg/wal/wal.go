@@ -48,8 +48,8 @@ func SerializeOperation(operation string, key, value []byte) ([]byte, error){
 	// handle operation type
 	if operation == "set" {
 		operationType = []byte{0x01} // Set operation
-	} else if operation == "delete" {
-		operationType = []byte{0x02} // Delete operation
+	// } else if operation == "delete" {
+	// 	operationType = []byte{0x02} // Delete operation
 	} else {
 		return nil, fmt.Errorf("unknown operation type: %s", operation)
 	}
