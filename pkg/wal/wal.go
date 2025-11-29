@@ -1,211 +1,204 @@
 package wal
 
 import (
-	"fmt"
 	"encoding/binary"
+	"fmt"
 	"hash/crc32"
+	"io"
 	"os"
 	"sync"
 	"time"
-	"io"
 )
 
 type WriteAheadLog struct {
-	path string
-	file *os.File
-    mu   sync.Mutex
+	path   string
+	file   *os.File
+	mu     sync.Mutex
 	stopCh chan struct{}
 }
 
 func NewWal(path string) (*WriteAheadLog, error) {
 	wal := &WriteAheadLog{
-        path: path,
-    }
+		path:   path,
+		stopCh: make(chan struct{}),
+	}
 
-    f, err := os.OpenFile(path, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
-    if err != nil {
-        return nil, err
-    }
+	f, err := os.OpenFile(path, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
+	if err != nil {
+		return nil, err
+	}
+	wal.file = f
 
-    wal.file = f
+	go wal.backgroundSync(100 * time.Millisecond)
 
-	wal.startBackgroundSync(100 * time.Millisecond)
-
-    return wal, nil
+	return wal, nil
 }
 
 func (wal *WriteAheadLog) Close() error {
 	wal.mu.Lock()
 	defer wal.mu.Unlock()
+
 	if wal.file == nil {
 		return nil
 	}
-	wal.file.Sync()
+
 	close(wal.stopCh)
-	wal.file.Close()
+	_ = wal.file.Sync()
+	err := wal.file.Close()
 	wal.file = nil
-	return nil
+	return err
 }
 
-// Serialize operation into a byte slice for WAL
-func SerializeOperation(operation string, key, value []byte) ([]byte, error){
-	var recordLength, checkSum, operationType, keyLength, valueLength []byte
+func SerializeOperation(operation string, key, value []byte) ([]byte, error) {
+	var opType byte
 
-	// handle operation type
-	if operation == "set" {
-		operationType = []byte{0x01} // Set operation
-	// } else if operation == "delete" {
-	// 	operationType = []byte{0x02} // Delete operation
-	} else {
-		return nil, fmt.Errorf("unknown operation type: %s", operation)
+	switch operation {
+	case "set":
+		opType = 0x01
+	default:
+		return nil, fmt.Errorf("unknown operation %q", operation)
 	}
 
-	// key and value lengths
-	keyLength = make([]byte, 4)
-	binary.BigEndian.PutUint32(keyLength, uint32(len(key)))
+	keyLen := uint32(len(key))
+	valueLen := uint32(len(value))
 
-	valueLength = make([]byte, 4)
-	binary.BigEndian.PutUint32(valueLength, uint32(len(value)))
+	// build payload
+	payload := make([]byte, 0, 1+4+4+len(key)+len(value))
+	payload = append(payload, opType)
 
-	// get checksum
-	payload := []byte{}
-	payload = append(payload, operationType...)
-	payload = append(payload, keyLength...)
-	payload = append(payload, valueLength...)
+	tmp := make([]byte, 4)
+	binary.BigEndian.PutUint32(tmp, keyLen)
+	payload = append(payload, tmp...)
+
+	binary.BigEndian.PutUint32(tmp, valueLen)
+	payload = append(payload, tmp...)
+
 	payload = append(payload, key...)
 	payload = append(payload, value...)
 
-	checkSumValue := crc32.ChecksumIEEE(payload)
-	checkSum = make([]byte, 4)
-	binary.BigEndian.PutUint32(checkSum, checkSumValue)
+	// compute checksum
+	check := crc32.ChecksumIEEE(payload)
 
-	// record length
-	recordLength = make([]byte, 4)
-	binary.BigEndian.PutUint32(recordLength, uint32(len(payload)))
-	
-	// final serialized entry
-	entry, header := make([]byte, 0), make([]byte, 0)
-	header = append(header, recordLength...)
-	header = append(header, checkSum...)
+	// header = [recordLength][checksum]
+	header := make([]byte, 8)
+	binary.BigEndian.PutUint32(header[0:4], uint32(len(payload)))
+	binary.BigEndian.PutUint32(header[4:8], check)
 
-	entry = append(entry, header...)
-	entry = append(entry, payload...)
-	return entry, nil
+	// final entry
+	return append(header, payload...), nil
 }
 
-// unserialze WAL entry into operation, key, value
-func DeserializeOperation(entry []byte) (string, []byte, []byte, error) {
+func DeserializeOperation(entry []byte) (op string, key, value []byte, err error) {
 	if len(entry) < 13 {
 		return "", nil, nil, fmt.Errorf("entry too short")
 	}
 
-	// read record length and checksum
 	recordLength := binary.BigEndian.Uint32(entry[0:4])
-	checkSum := binary.BigEndian.Uint32(entry[4:8])
+	check := binary.BigEndian.Uint32(entry[4:8])
 
 	payload := entry[8:]
 
-	// read operation type
-	operationType := payload[0]
-	keyLength := binary.BigEndian.Uint32(payload[1:5])
-	valueLength := binary.BigEndian.Uint32(payload[5:9])
-
-	key := payload[9 : 9+keyLength]
-	value := payload[9+keyLength : 9+keyLength+valueLength]
-
-	var operation string
-	if operationType == 0x01 {
-		operation = "set"
-	} else if operationType == 0x02 {
-		operation = "delete"
-	} else {
-		return "", nil, nil, fmt.Errorf("unknown operation type: %d", operationType)
+	if uint32(len(payload)) != recordLength {
+		return "", nil, nil, fmt.Errorf("record length mismatch")
 	}
 
-	return recordLength, checkSum, operation, key, value, nil
+	if crc32.ChecksumIEEE(payload) != check {
+		return "", nil, nil, fmt.Errorf("checksum mismatch")
+	}
+
+	opType := payload[0]
+	keyLen := binary.BigEndian.Uint32(payload[1:5])
+	valLen := binary.BigEndian.Uint32(payload[5:9])
+
+	if int(keyLen)+int(valLen)+9 != len(payload) {
+		return "", nil, nil, fmt.Errorf("payload lengths inconsistent")
+	}
+
+	key = payload[9 : 9+keyLen]
+	value = payload[9+keyLen : 9+keyLen+valLen]
+
+	switch opType {
+	case 0x01:
+		op = "set"
+	default:
+		return "", nil, nil, fmt.Errorf("unknown op type")
+	}
+
+	return op, key, value, nil
 }
 
-// Append parsed entry to WAL file
 func (wal *WriteAheadLog) Append(entry []byte) error {
 	wal.mu.Lock()
 	defer wal.mu.Unlock()
 
-	// append entry
-	_, err := wal.file.Write(entry)
-	if err != nil {
+	if wal.file == nil {
+		return fmt.Errorf("WAL file is closed")
+	}
+
+	if _, err := wal.file.Write(entry); err != nil {
 		return err
 	}
-	return nil
+
+	return wal.file.Sync() // ensures durability
 }
 
-// write the WAL file from RAM to the physical disk.
 func (wal *WriteAheadLog) Sync() error {
 	wal.mu.Lock()
 	defer wal.mu.Unlock()
+
 	if wal.file == nil {
-		return fmt.Errorf("WAL file is not open")
+		return nil
 	}
 	return wal.file.Sync()
 }
 
-// Replay WAL entries by calling ProcessFunc for each entry
-func (wal *WriteAheadLog) Replay(ProcessFunc func(entry []byte) error) error {
-    wal.mu.Lock()
-    defer wal.mu.Unlock()
+func (wal *WriteAheadLog) Replay(fn func(entry []byte) error) error {
+	f, err := os.Open(wal.path)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
 
-    f, err := os.Open(wal.path)
-    if err != nil {
-        return err
-    }
-    defer f.Close()
+	for {
+		header := make([]byte, 8)
+		_, err := io.ReadFull(f, header)
+		if err == io.EOF {
+			return nil
+		}
+		if err != nil {
+			return nil // corrupted tail
+		}
 
-    for {
-        header := make([]byte, 8)
-        _, err := io.ReadFull(f, header)
+		recLen := binary.BigEndian.Uint32(header[:4])
+		payload := make([]byte, recLen)
 
-        if err == io.EOF {
-            return nil
-        }
-        if err != nil {
-            return nil // corrupted tail
-        }
+		_, err = io.ReadFull(f, payload)
+		if err != nil {
+			return nil // truncated entry, ignore tail
+		}
 
-        recordLength := binary.BigEndian.Uint32(header[:4])
-        payload := make([]byte, recordLength)
+		entry := append(header, payload...)
 
-        _, err = io.ReadFull(f, payload)
-        if err != nil {
-            return nil // corrupted tail
-        }
+		if err := fn(entry); err != nil {
+			return err
+		}
+	}
+}
 
-        entry := append(header, payload...)
+func (wal *WriteAheadLog) backgroundSync(interval time.Duration) {
+	t := time.NewTicker(interval)
+	defer t.Stop()
 
-        // JUST pass entry — not operation, key, value
-        if err := ProcessFunc(entry); err != nil {
-            return err
-        }
-    }
+	for {
+		select {
+		case <-wal.stopCh:
+			return
+		case <-t.C:
+			wal.Sync()
+		}
+	}
 }
 
 func (wal *WriteAheadLog) Path() string {
 	return wal.path
-}	
-
-func (wal *WriteAheadLog) startBackgroundSync(interval time.Duration) {
-    wal.stopCh = make(chan struct{})
-
-    go func() {
-        ticker := time.NewTicker(interval)
-        defer ticker.Stop()
-
-        for {
-            select {
-            case <-ticker.C:
-                wal.Sync()
-            case <-wal.stopCh:
-                return
-            }
-        }
-    }()
 }
-
