@@ -3,12 +3,42 @@ package wal
 import (
 	"fmt",
 	"encoding/binary",
-	"hash/crc32",,
-	"os"
+	"hash/crc32",
+	"os",
+	"sync",
 )
 
 type WriteAheadLog struct {
 	path string
+	file *os.File
+    mu   sync.Mutex
+}
+
+func NewWal(path string) (*WriteAheadLog, error) {
+	wal := &WriteAheadLog{
+        path: path,
+    }
+
+    f, err := os.OpenFile(path, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
+    if err != nil {
+        return nil, err
+    }
+
+    wal.file = f
+    return wal, nil
+}
+
+func (wal *WriteAheadLog) Close() error {
+	wal.mu.Lock()
+	defer wal.mu.Unlock()
+	if wal.file == nil {
+		wal.mu.Unlock()
+		return nil
+	}
+	wal.file.Sync()
+	wal.file.Close()
+	wal.file = nil
+	return nil
 }
 
 // Serialize operation into a byte slice for WAL
@@ -59,6 +89,8 @@ func SerializeOperation(operation string, key, value []byte) ([]byte, error){
 
 // Append parsed entry to WAL file
 func (wal WriteAheadLog) Append(entry []byte) error {
+	wal.mu.Lock()
+	defer wal.mu.Unlock()
 
 	// open file in append mode
 	f, err := os.OpenFile(wal.path, os.O_CREATE | os.O_WRONLY | os.O_APPEND, 0644)
@@ -77,8 +109,14 @@ func (wal WriteAheadLog) Append(entry []byte) error {
 
 }
 
-func (wal WriteAheadLog) Sync(PushFunc func() error) error {
-	// Sync WAL to disk and call PushFunc to push entries to remote storage
+func (wal *WriteAheadLog) Sync() error {
+	// write the WAL file from RAM to the physical disk.
+	wal.mu.Lock()
+	defer wal.mu.Unlock()
+	if wal.file == nil {
+		return fmt.Errorf("WAL file is not open")
+	}
+	return wal.file.Sync()
 }
 
 func (wal WriteAheadLog) Flush() error {
