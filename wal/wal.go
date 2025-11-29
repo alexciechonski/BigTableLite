@@ -154,15 +154,15 @@ func (wal WriteAheadLog) Replay(ProcessFunc func(entry []byte) error) error {
     defer f.Close()
 
     for {
-        // --- Read header: 8 bytes ---
+        // Read header: 8 bytes
         header := make([]byte, 8)
         _, err := io.ReadFull(f, header)
 
         if err == io.EOF {
-            return nil // clean end of WAL
+            return nil
         }
         if err != nil {
-            // partial header → corrupted tail → stop replay quietly
+            // partial header ->  corrupted tail -> stop replay quietly
             return nil
         }
 
