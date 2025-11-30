@@ -19,6 +19,8 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/redis/go-redis/v9"
 	"google.golang.org/grpc"
+	"github.com/joho/godotenv"
+	"github.com/alexciechonski/BigTableLite/pkg/config"
 )
 
 var (
@@ -62,7 +64,8 @@ func init() {
 	prometheus.MustRegister(requestLatency)
 }
 
-// getEnv gets an environment variable or returns a default value
+// getEnv gets an environment variable or returns a default value 
+// is this necessary?
 func getEnv(key, defaultValue string) string {
 	if value := os.Getenv(key); value != "" {
 		return value
@@ -201,6 +204,10 @@ func (s *BigTableLiteServer) Get(ctx context.Context, req *proto.GetRequest) (*p
 }
 
 func main() {
+	// load environment variables
+	godotenv.Load()
+	config.C.WALPath = getEnv("WAL_PATH", "wal.txt")
+
 	// Support environment variables with flag defaults
 	grpcPort := flag.String("grpc-port", getEnv("GRPC_PORT", "50051"), "gRPC server port")
 	metricsPort := flag.String("metrics-port", getEnv("METRICS_PORT", "9090"), "Prometheus metrics port")

@@ -15,6 +15,7 @@ import (
 	"unsafe"
 
 	"github.com/alexciechonski/BigTableLite/pkg/wal"
+	"github.com/alexciechonski/BigTableLite/pkg/config"
 )
 
 type SSTableEngine struct {
@@ -25,19 +26,15 @@ type SSTableEngine struct {
 func NewSSTableEngine(dataDir string) (*SSTableEngine, error) {
 	engine := &SSTableEngine{}
 
-	// 1. Initialize WAL
-	wPath := os.Getenv("WAL_PATH")
-	if wPath == "" {
-		wPath = "wal.txt"
-	}
-
+	// Initialize WAL
+	wPath := config.C.WALPath
 	w, err := wal.NewWal(wPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to initialize WAL: %w", err)
 	}
 	engine.wal = w
 
-	// 2. Replay WAL BEFORE initializing memtable/SSTables
+	// Replay WAL BEFORE initializing memtable/SSTables
 	err = engine.wal.Replay(func(entry []byte) error {
 		op, key, value, err := wal.DeserializeOperation(entry)
 		if err != nil {
