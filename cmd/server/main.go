@@ -83,7 +83,7 @@ type BigTableLiteServer struct {
 
 // NewBigTableLiteServer creates a new server instance with SSTable engine
 func NewBigTableLiteServer(dataDir string) (*BigTableLiteServer, error) {
-	engine, err := storage.NewSSTableEngine(dataDir)
+	engine, err := storage.NewSSTableEngine(dataDir, config.C.WALPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to initialize SSTable engine: %w", err)
 	}
@@ -212,7 +212,7 @@ func main() {
 	// Support environment variables with flag defaults
 	grpcPort := flag.String("grpc-port", getEnv("GRPC_PORT", "50051"), "gRPC server port")
 	metricsPort := flag.String("metrics-port", getEnv("METRICS_PORT", "9090"), "Prometheus metrics port")
-	// dataDir := flag.String("data-dir", getEnv("DATA_DIR", "./data"), "Data directory for SSTable storage")
+	dataDir := flag.String("data-dir", getEnv("DATA_DIR", "./data"), "Data directory for SSTable storage")
 	useRedis := flag.Bool("use-redis", false, "Use Redis backend instead of SSTable")
 	redisAddr := flag.String("redis-addr", getEnv("REDIS_ADDR", "localhost:6379"), "Redis address (only used with --use-redis)")
 	flag.Parse()
