@@ -42,6 +42,9 @@ extern "C" bool sstable_init(const char* dir) {
             break;
         }
     }
+
+    memtable.clear();
+    memtable_size = 0;
     
     return true;
 }
