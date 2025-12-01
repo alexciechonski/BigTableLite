@@ -4,6 +4,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"fmt"
 )
 
 func setupTestEngine(t *testing.T) *SSTableEngine {
@@ -11,8 +12,9 @@ func setupTestEngine(t *testing.T) *SSTableEngine {
 	testDir := filepath.Join(os.TempDir(), "bigtablelite_test", t.Name())
 	os.RemoveAll(testDir) // Clean up any previous test data
 	os.MkdirAll(testDir, 0755)
+	testWALFile := filepath.Join(testDir, "wal.txt")
 
-	engine, err := NewSSTableEngine(testDir)
+	engine, err := NewSSTableEngine(testDir, testWALFile)
 	if err != nil {
 		t.Fatalf("Failed to create SSTable engine: %v", err)
 	}
@@ -225,5 +227,73 @@ func TestSSTableEngine_LargeValue(t *testing.T) {
 	if len(value) != len(largeValue) {
 		t.Errorf("Expected value length %d, got %d", len(largeValue), len(value))
 	}
+}
+
+func TestSStableEngine_Replay(t *testing.T) {
+
+	// Setup Test engine
+	baseDir := filepath.Join(os.TempDir(), t.Name())
+    testDataDir := filepath.Join(baseDir, "data")
+    os.MkdirAll(testDataDir, 0755)
+	testWALFile := filepath.Join(baseDir, "wal.txt")
+
+	engine1, err := NewSSTableEngine(testDataDir, testWALFile)
+	if err != nil {
+		t.Fatalf("Failed to create SSTable engine: %v", err)
+	}
+
+	// Add entries
+	if err := engine1.Put("a", "1"); err != nil {
+        t.Fatalf("Put(a) failed: %v", err)
+    }
+    if err := engine1.Put("b", "2"); err != nil {
+        t.Fatalf("Put(b) failed: %v", err)
+    }
+    if err := engine1.Put("c", "3"); err != nil {
+        t.Fatalf("Put(c) failed: %v", err)
+    }
+	
+	// truncate last write
+	walPath := engine1.wal.Path()
+    info, err := os.Stat(walPath)
+    if err != nil {
+        t.Fatalf("Failed to stat WAL file: %v", err)
+    }
+    size := info.Size()
+    if err := os.Truncate(walPath, size-5); err != nil {
+        t.Fatalf("Failed to truncate WAL: %v", err)
+    }
+
+	// Simulate crash
+	engine1 = nil
+	engine2, err := NewSSTableEngine(testDataDir, testWALFile)
+	if err != nil {
+		t.Fatalf("Failed to recover SSTable engine: %v", err)
+	}
+
+	// Verify recovery
+	val, found, err := engine2.Get("a")
+	if err != nil { t.Fatal(err) }
+	if !found { t.Errorf("expected a to be found") }
+	if val != "1" {
+		t.Errorf("Expected key 'a' to have value '1', got '%s'", val)
+	}
+
+	val, found, err = engine2.Get("b")
+	if err != nil { t.Fatal(err) }
+	if !found { t.Errorf("expected b to be found") }
+	if val != "2" {
+		t.Errorf("Expected key 'b' to have value '2', got '%s'", val)
+	}
+
+	val, found, err = engine2.Get("c")
+	if err != nil { t.Fatal(err) }
+	if found { 
+		fmt.Println("val:", val)
+		t.Errorf("expected c to be NOT found") 
+	}
+
+	// manual cleanup
+	cleanupTestEngine(t, engine2)
 }
 

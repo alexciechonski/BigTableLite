@@ -13,9 +13,9 @@ import (
 	"fmt"
 	"os"
 	"unsafe"
+	"log"
 
 	"github.com/alexciechonski/BigTableLite/pkg/wal"
-	"github.com/alexciechonski/BigTableLite/pkg/config"
 )
 
 type SSTableEngine struct {
@@ -23,12 +23,11 @@ type SSTableEngine struct {
 	wal         *wal.WriteAheadLog
 }
 
-func NewSSTableEngine(dataDir string) (*SSTableEngine, error) {
+func NewSSTableEngine(dataDir, WALPath string) (*SSTableEngine, error) {
 	engine := &SSTableEngine{}
 
 	// Initialize WAL
-	wPath := config.C.WALPath
-	w, err := wal.NewWal(wPath)
+	w, err := wal.NewWal(WALPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to initialize WAL: %w", err)
 	}
@@ -53,10 +52,11 @@ func NewSSTableEngine(dataDir string) (*SSTableEngine, error) {
 	})
 
 	if err != nil {
-		return nil, fmt.Errorf("WAL replay failed: %w", err)
+		log.Printf("WAL replay stopped early: %v", err)
+		// return nil, fmt.Errorf("WAL replay failed: %w", err)
 	}
 
-	// 3. Now start the SSTable engine
+	// start the SSTable engine
 	cDir := C.CString(dataDir)
 	defer C.free(unsafe.Pointer(cDir))
 
