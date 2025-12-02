@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"flag"
 	"fmt"
 	"log"
 	"net"
@@ -19,7 +18,6 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/redis/go-redis/v9"
 	"google.golang.org/grpc"
-	"github.com/joho/godotenv"
 	"github.com/alexciechonski/BigTableLite/pkg/config"
 )
 
@@ -205,36 +203,35 @@ func (s *BigTableLiteServer) Get(ctx context.Context, req *proto.GetRequest) (*p
 
 func main() {
 	// load environment variables
-	godotenv.Load()
-	config.C.WALPath = getEnv("WAL_PATH", "wal.txt")
-	config.C.DataDir = getEnv("DATA_DIR", "./data")
+	cfg, err := config.Load()
+	if err != nil {
+		panic(err)
+	}
 
 	// Support environment variables with flag defaults
-	grpcPort := flag.String("grpc-port", getEnv("GRPC_PORT", "50051"), "gRPC server port")
-	metricsPort := flag.String("metrics-port", getEnv("METRICS_PORT", "9090"), "Prometheus metrics port")
-	dataDir := flag.String("data-dir", getEnv("DATA_DIR", "./data"), "Data directory for SSTable storage")
-	useRedis := flag.Bool("use-redis", false, "Use Redis backend instead of SSTable")
-	redisAddr := flag.String("redis-addr", getEnv("REDIS_ADDR", "localhost:6379"), "Redis address (only used with --use-redis)")
-	flag.Parse()
+	grpcPort := cfg.GRPCPort
+	metricsPort := cfg.MetricsPort
+	dataDir := cfg.DataDir
+	useRedis := cfg.UseRedis
+	redisAddr := cfg.RedisAddr
 
 	// Create server instance
 	var server *BigTableLiteServer
-	var err error
-	if *useRedis {
+	if useRedis {
 		log.Println("Using Redis backend")
-		server, err = NewBigTableLiteServerWithRedis(*redisAddr)
+		server, err = NewBigTableLiteServerWithRedis(redisAddr)
 	} else {
-		log.Printf("Using SSTable backend with data directory: %s", *dataDir)
-		server, err = NewBigTableLiteServer(*dataDir)
+		log.Printf("Using SSTable backend with data directory: %s", dataDir)
+		server, err = NewBigTableLiteServer(dataDir)
 	}
 	if err != nil {
 		log.Fatalf("Failed to create server: %v", err)
 	}
 
 	// Start gRPC server
-	grpcListener, err := net.Listen("tcp", fmt.Sprintf(":%s", *grpcPort))
+	grpcListener, err := net.Listen("tcp", fmt.Sprintf(":%s", grpcPort))
 	if err != nil {
-		log.Fatalf("Failed to listen on port %s: %v", *grpcPort, err)
+		log.Fatalf("Failed to listen on port %s: %v", grpcPort, err)
 	}
 
 	grpcServer := grpc.NewServer()
@@ -243,9 +240,9 @@ func main() {
 	// Start metrics HTTP server
 	metricsMux := http.NewServeMux()
 	metricsMux.Handle("/metrics", promhttp.Handler())
-	metricsListener, err := net.Listen("tcp", fmt.Sprintf(":%s", *metricsPort))
+	metricsListener, err := net.Listen("tcp", fmt.Sprintf(":%s", metricsPort))
 	if err != nil {
-		log.Fatalf("Failed to listen on metrics port %s: %v", *metricsPort, err)
+		log.Fatalf("Failed to listen on metrics port %s: %v", metricsPort, err)
 	}
 
 	metricsServer := &http.Server{
@@ -254,7 +251,7 @@ func main() {
 
 	// Start gRPC server in a goroutine
 	go func() {
-		log.Printf("gRPC server listening on port %s", *grpcPort)
+		log.Printf("gRPC server listening on port %s", grpcPort)
 		if err := grpcServer.Serve(grpcListener); err != nil {
 			log.Fatalf("gRPC server failed: %v", err)
 		}
@@ -262,7 +259,7 @@ func main() {
 
 	// Start metrics server in a goroutine
 	go func() {
-		log.Printf("Metrics server listening on port %s", *metricsPort)
+		log.Printf("Metrics server listening on port %s", metricsPort)
 		if err := metricsServer.Serve(metricsListener); err != nil && err != http.ErrServerClosed {
 			log.Fatalf("Metrics server failed: %v", err)
 		}
