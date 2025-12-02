@@ -13,7 +13,7 @@ import (
 	"fmt"
 	"os"
 	"unsafe"
-	"log"
+	"strings"
 
 	"github.com/alexciechonski/BigTableLite/pkg/wal"
 )
@@ -24,48 +24,59 @@ type SSTableEngine struct {
 }
 
 func NewSSTableEngine(dataDir, WALPath string) (*SSTableEngine, error) {
-	engine := &SSTableEngine{}
+	// INIT SSTable (clears memtable)
+    cDir := C.CString(dataDir)
+    defer C.free(unsafe.Pointer(cDir))
+    if !C.sstable_init(cDir) {
+        return nil, errors.New("failed to initialize sstable")
+    }
 
-	// Initialize WAL
-	w, err := wal.NewWal(WALPath)
-	if err != nil {
-		return nil, fmt.Errorf("failed to initialize WAL: %w", err)
-	}
-	engine.wal = w
+    // Open WAL
+    w, err := wal.NewWal(WALPath)
+    if err != nil {
+        return nil, err
+    }
 
-	// Replay WAL BEFORE initializing memtable/SSTables
-	err = engine.wal.Replay(func(entry []byte) error {
-		op, key, value, err := wal.DeserializeOperation(entry)
-		if err != nil {
-			return err
-		}
+    engine := &SSTableEngine{wal: w}
 
-		if op == "set" {
-			cKey := C.CString(string(key))
-			cVal := C.CString(string(value))
-			C.sstable_put(cKey, cVal)
-			C.free(unsafe.Pointer(cKey))
-			C.free(unsafe.Pointer(cVal))
-		}
+    // Replay WAL
+    err = w.Replay(func(entry []byte) error {
+        op, key, value, err := wal.DeserializeOperation(entry)
+        if err != nil {
+            return err
+        }
 
-		return nil
-	})
+        if op == "set" {
+            cKey := C.CString(string(key))
+            cVal := C.CString(string(value))
+            C.sstable_put(cKey, cVal)
+            C.free(unsafe.Pointer(cKey))
+            C.free(unsafe.Pointer(cVal))
+        }
+        return nil
+    })
 
-	if err != nil {
-		log.Printf("WAL replay stopped early: %v", err)
-		// return nil, fmt.Errorf("WAL replay failed: %w", err)
-	}
+    if err != nil {
+        // checksum mismatch = safe to ignore
+        if !strings.Contains(err.Error(), "checksum mismatch") {
+            return nil, fmt.Errorf("WAL replay failed: %w", err)
+        }
+    }
 
-	// start the SSTable engine
-	cDir := C.CString(dataDir)
-	defer C.free(unsafe.Pointer(cDir))
+    engine.initialized = true
+    return engine, nil
+}
 
-	if !C.sstable_init(cDir) {
-		return nil, errors.New("failed to initialize SSTable engine")
-	}
-
-	engine.initialized = true
-	return engine, nil
+func (e *SSTableEngine) DestroySSTableEngine() {
+	if e == nil {
+        return
+    }
+    C.sstable_destroy()
+    if e.wal != nil {
+        e.wal.Close()
+        e.wal = nil
+    }
+    e.initialized = false
 }
 
 func (e *SSTableEngine) Put(key, value string) error {
