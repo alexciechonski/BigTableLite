@@ -7,23 +7,28 @@ on:
 
 jobs:
   test:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
 
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/setup-go@v4
         with:
           go-version: '1.23'
-      
+          check-latest: true
+          cache: true
+
       - name: Install system compiler
         run: sudo apt-get update && sudo apt-get install -y build-essential
 
-      - name: Build C++ SSTable static library
-        run: make -C sstable
+      - name: Cache C++ build
+        uses: actions/cache@v4
+        with:
+          path: sstable/libsstable.a
+          key: cxx-sstable-${{ hashFiles('sstable/**/*.cpp', 'sstable/**/*.h', 'sstable/Makefile') }}
 
-      # - name: Start Redis
-      #   run: |
-      #     docker run -d -p 6379:6379 --name redis redis:7
+      - name: Build C++ SSTable static library
+        run: test -f sstable/libsstable.a || make -C sstable
 
       - name: Tidy modules
         run: go mod tidy
