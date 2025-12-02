@@ -35,3 +35,10 @@ func BenchmarkWalAppend(b *testing.B) {
 		}
 	}
 }
+
+func (wal *WriteAheadLog) appendNoSync(entry []byte) error {
+	wal.mu.Lock()
+	defer wal.mu.Unlock()
+	_, err := wal.file.Write(entry)
+	return err
+}
