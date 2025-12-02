@@ -36,9 +36,27 @@ func BenchmarkWalAppend(b *testing.B) {
 	}
 }
 
-func (wal *WriteAheadLog) appendNoSync(entry []byte) error {
-	wal.mu.Lock()
-	defer wal.mu.Unlock()
-	_, err := wal.file.Write(entry)
-	return err
+func BenchmarkWalFullWrite(b *testing.B) {
+	tmpfile := "wal_fullwrite_bench.txt"
+	os.Remove(tmpfile)
+
+	w, err := NewWal(tmpfile)
+	if err != nil {
+		b.Fatal(err)
+	}
+	defer w.Close()
+
+	key := []byte("benchmark-key")
+	value := []byte("benchmark-value-1234567890")
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		entry, err := SerializeOperation("set", key, value)
+		if err != nil {
+			b.Fatal(err)
+		}
+		if err := w.Append(entry); err != nil {
+			b.Fatal(err)
+		}
+	}
 }
