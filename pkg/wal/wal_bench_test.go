@@ -1,7 +1,6 @@
 package wal
 
 import (
-	"os"
 	"testing"
 )
 
