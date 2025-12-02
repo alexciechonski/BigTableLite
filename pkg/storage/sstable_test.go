@@ -233,6 +233,7 @@ func TestSStableEngine_Replay(t *testing.T) {
 
 	// Setup Test engine
 	baseDir := filepath.Join(os.TempDir(), t.Name())
+	os.RemoveAll(baseDir)
     testDataDir := filepath.Join(baseDir, "data")
     os.MkdirAll(testDataDir, 0755)
 	testWALFile := filepath.Join(baseDir, "wal.txt")
@@ -255,6 +256,7 @@ func TestSStableEngine_Replay(t *testing.T) {
 	
 	// truncate last write
 	walPath := engine1.wal.Path()
+	engine1.wal.Close()
     info, err := os.Stat(walPath)
     if err != nil {
         t.Fatalf("Failed to stat WAL file: %v", err)
@@ -265,6 +267,7 @@ func TestSStableEngine_Replay(t *testing.T) {
     }
 
 	// Simulate crash
+	engine1.DestroySSTableEngine()
 	engine1 = nil
 	engine2, err := NewSSTableEngine(testDataDir, testWALFile)
 	if err != nil {
@@ -296,4 +299,6 @@ func TestSStableEngine_Replay(t *testing.T) {
 	// manual cleanup
 	cleanupTestEngine(t, engine2)
 }
+
+
 
