@@ -17,6 +17,9 @@ typedef struct {
 // Initialize SSTable engine with data directory
 bool sstable_init(const char* data_dir);
 
+// destroy sstable engine
+void sstable_destroy();
+
 // Put a key-value pair into memtable
 bool sstable_put(const char* key, const char* value);
 
