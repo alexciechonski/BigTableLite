@@ -8,7 +8,7 @@ import (
 )
 
 func BenchmarkSSTablePut(b *testing.B) {
-    engine, _ := NewSSTableEngine("./benchdata")
+    engine, _ := NewSSTableEngine("./benchdata", "./benchdata/wal.txt")
     b.Cleanup(func() { os.RemoveAll("./benchdata") })
 
     b.ResetTimer()
@@ -19,7 +19,7 @@ func BenchmarkSSTablePut(b *testing.B) {
 }
 
 func BenchmarkSSTableGetExisting(b *testing.B) {
-    engine, _ := NewSSTableEngine("./benchdata")
+    engine, _ := NewSSTableEngine("./benchdata", "./benchdata/wal.txt")
     _ = engine.Put("bench-key", "bench-value")
     b.Cleanup(func() { os.RemoveAll("./benchdata") })
 
@@ -31,7 +31,7 @@ func BenchmarkSSTableGetExisting(b *testing.B) {
 }
 
 func BenchmarkSSTableGetMissing(b *testing.B) {
-    engine, _ := NewSSTableEngine("./benchdata")
+    engine, _ := NewSSTableEngine("./benchdata", "./benchdata/wal.txt")
     b.Cleanup(func() { os.RemoveAll("./benchdata") })
 
     b.ResetTimer()
@@ -42,7 +42,7 @@ func BenchmarkSSTableGetMissing(b *testing.B) {
 }
 
 func BenchmarkSSTablePutSequential(b *testing.B) {
-    engine, _ := NewSSTableEngine("./benchdata")
+    engine, _ := NewSSTableEngine("./benchdata", "./benchdata/wal.txt")
     b.Cleanup(func() { os.RemoveAll("./benchdata") })
 
     b.ResetTimer()
@@ -54,7 +54,7 @@ func BenchmarkSSTablePutSequential(b *testing.B) {
 }
 
 func BenchmarkSSTablePutOverwrite(b *testing.B) {
-    engine, _ := NewSSTableEngine("./benchdata")
+    engine, _ := NewSSTableEngine("./benchdata", "./benchdata/wal.txt")
     _ = engine.Put("bench-key", "initial")
     b.Cleanup(func() { os.RemoveAll("./benchdata") })
 
@@ -66,7 +66,7 @@ func BenchmarkSSTablePutOverwrite(b *testing.B) {
 }
 
 func BenchmarkSSTableFlush(b *testing.B) {
-    engine, _ := NewSSTableEngine("./benchdata")
+    engine, _ := NewSSTableEngine("./benchdata", "./benchdata/wal.txt")
     b.Cleanup(func() { os.RemoveAll("./benchdata") })
 
     for i := 0; i < 10000; i++ {
@@ -82,7 +82,7 @@ func BenchmarkSSTableFlush(b *testing.B) {
 
 func BenchmarkSSTablePutLargeValue(b *testing.B) {
     large := strings.Repeat("x", 1024*100) // 100 KB
-    engine, _ := NewSSTableEngine("./benchdata")
+    engine, _ := NewSSTableEngine("./benchdata", "./benchdata/wal.txt")
     b.Cleanup(func() { os.RemoveAll("./benchdata") })
 
     b.ResetTimer()

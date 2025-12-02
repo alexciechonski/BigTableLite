@@ -1,5 +1,7 @@
 *.test
 bigtablelite
+.env
+**/wal.txt
 
 # C++ build artifacts
 sstable/*.o

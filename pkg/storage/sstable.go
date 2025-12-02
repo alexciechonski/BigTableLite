@@ -7,104 +7,153 @@ package storage
 #include <stdlib.h>
 */
 import "C"
+
 import (
 	"errors"
+	"fmt"
+	"os"
 	"unsafe"
+	"strings"
+
+	"github.com/alexciechonski/BigTableLite/pkg/wal"
 )
 
-// SSTableEngine wraps the C++ SSTable implementation
 type SSTableEngine struct {
 	initialized bool
+	wal         *wal.WriteAheadLog
 }
 
-// NewSSTableEngine creates a new SSTable engine instance
-func NewSSTableEngine(dataDir string) (*SSTableEngine, error) {
-	engine := &SSTableEngine{}
-	
-	cDataDir := C.CString(dataDir)
-	defer C.free(unsafe.Pointer(cDataDir))
-	
-	success := C.sstable_init(cDataDir)
-	if !success {
-		return nil, errors.New("failed to initialize SSTable engine")
-	}
-	
-	engine.initialized = true
-	return engine, nil
+func NewSSTableEngine(dataDir, WALPath string) (*SSTableEngine, error) {
+	// INIT SSTable (clears memtable)
+    cDir := C.CString(dataDir)
+    defer C.free(unsafe.Pointer(cDir))
+    if !C.sstable_init(cDir) {
+        return nil, errors.New("failed to initialize sstable")
+    }
+
+    // Open WAL
+    w, err := wal.NewWal(WALPath)
+    if err != nil {
+        return nil, err
+    }
+
+    engine := &SSTableEngine{wal: w}
+
+    // Replay WAL
+    err = w.Replay(func(entry []byte) error {
+        op, key, value, err := wal.DeserializeOperation(entry)
+        if err != nil {
+            return err
+        }
+
+        if op == "set" {
+            cKey := C.CString(string(key))
+            cVal := C.CString(string(value))
+            C.sstable_put(cKey, cVal)
+            C.free(unsafe.Pointer(cKey))
+            C.free(unsafe.Pointer(cVal))
+        }
+        return nil
+    })
+
+    if err != nil {
+        // checksum mismatch = safe to ignore
+        if !strings.Contains(err.Error(), "checksum mismatch") {
+            return nil, fmt.Errorf("WAL replay failed: %w", err)
+        }
+    }
+
+    engine.initialized = true
+    return engine, nil
 }
 
-// Put stores a key-value pair in the memtable
+func (e *SSTableEngine) DestroySSTableEngine() {
+	if e == nil {
+        return
+    }
+    C.sstable_destroy()
+    if e.wal != nil {
+        e.wal.Close()
+        e.wal = nil
+    }
+    e.initialized = false
+}
+
 func (e *SSTableEngine) Put(key, value string) error {
 	if !e.initialized {
 		return errors.New("engine not initialized")
 	}
-	
+
+	// Write to WAL FIRST
+	entry, err := wal.SerializeOperation("set", []byte(key), []byte(value))
+	if err != nil {
+		return err
+	}
+
+	if err := e.wal.Append(entry); err != nil {
+		return fmt.Errorf("cannot append to WAL: %w", err)
+	}
+
+	// Then apply to memtable
 	cKey := C.CString(key)
+	cVal := C.CString(value)
 	defer C.free(unsafe.Pointer(cKey))
-	
-	cValue := C.CString(value)
-	defer C.free(unsafe.Pointer(cValue))
-	
-	success := C.sstable_put(cKey, cValue)
-	if !success {
-		return errors.New("failed to put key-value pair")
+	defer C.free(unsafe.Pointer(cVal))
+
+	if !C.sstable_put(cKey, cVal) {
+		return errors.New("sstable_put failed")
 	}
-	
-	// Check if memtable needs flushing
+
+	// Check if flushing needed
 	if C.sstable_needs_flush() {
-		if err := e.Flush(); err != nil {
-			return err
-		}
+		return e.Flush()
 	}
-	
+
 	return nil
 }
 
-// Get retrieves a value by key (checks memtable first, then SSTables)
-func (e *SSTableEngine) Get(key string) (string, bool, error) {
-	if !e.initialized {
-		return "", false, errors.New("engine not initialized")
-	}
-	
-	cKey := C.CString(key)
-	defer C.free(unsafe.Pointer(cKey))
-	
-	var bytes C.sstable_bytes
-	success := C.sstable_get(cKey, &bytes)
-	defer C.sstable_free_bytes(&bytes)
-	
-	if !success {
-		return "", false, nil // Key not found
-	}
-	
-	if bytes.data == nil {
-		return "", false, nil
-	}
-	
-	value := C.GoStringN(bytes.data, C.int(bytes.len))
-	return value, true, nil
-}
-
-// Flush writes the memtable to disk as a new SSTable
 func (e *SSTableEngine) Flush() error {
 	if !e.initialized {
 		return errors.New("engine not initialized")
 	}
-	
-	success := C.sstable_flush()
-	if !success {
-		return errors.New("failed to flush memtable")
+
+	if !C.sstable_flush() {
+		return errors.New("sstable_flush failed")
 	}
-	
+
+	// WAL rotation
+	if err := e.wal.Close(); err != nil {
+		return err
+	}
+
+	if err := os.Remove(e.wal.Path()); err != nil {
+		return err
+	}
+
+	newWal, err := wal.NewWal(e.wal.Path())
+	if err != nil {
+		return err
+	}
+
+	e.wal = newWal
 	return nil
 }
 
-// NeedsFlush checks if the memtable needs to be flushed
-func (e *SSTableEngine) NeedsFlush() bool {
+func (e *SSTableEngine) Get(key string) (string, bool, error) {
 	if !e.initialized {
-		return false
+		return "", false, errors.New("engine not initialized")
 	}
-	
-	return bool(C.sstable_needs_flush())
-}
 
+	cKey := C.CString(key)
+	defer C.free(unsafe.Pointer(cKey))
+
+	var bytes C.sstable_bytes
+	ok := C.sstable_get(cKey, &bytes)
+	defer C.sstable_free_bytes(&bytes)
+
+	if !ok || bytes.data == nil {
+		return "", false, nil
+	}
+
+	return C.GoStringN(bytes.data, C.int(bytes.len)), true, nil
+}

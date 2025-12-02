@@ -42,8 +42,18 @@ extern "C" bool sstable_init(const char* dir) {
             break;
         }
     }
+
+    memtable.clear();
+    memtable_size = 0;
     
     return true;
+}
+
+// sstable destructor
+extern "C" void sstable_destroy() {
+    memtable.clear();
+    memtable_size = 0;
+    sstable_counter = 0;
 }
 
 // Put a key-value pair into memtable
