@@ -6,3 +6,5 @@ bigtablelite
 # C++ build artifacts
 sstable/*.o
 sstable/*.a
+
+data/
