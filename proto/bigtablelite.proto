@@ -11,6 +11,9 @@ service BigTableLite {
   
   // Get a value by key
   rpc Get(GetRequest) returns (GetResponse);
+
+  // Delete a key value pair
+  rpc Delete(DeleteRequest) returns (DeleteResponse);
 }
 
 // Set request message
@@ -36,4 +39,16 @@ message GetResponse {
   string value = 2;
   string message = 3;
 }
+
+// Delete request message
+message DeleteRequest {
+  string key = 1;
+}
+
+// Delete response message 
+message DeleteResponse {
+  bool success = 1;
+  string message = 2;
+}
+
 
