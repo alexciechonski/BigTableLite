@@ -16,8 +16,28 @@ if ! kubectl cluster-info &> /dev/null; then
     exit 1
 fi
 
+# Select tag: --dev uses latest, otherwise use git SHA
+if [[ "$1" == "--dev" ]]; then
+    TAG="latest"
+else
+    TAG=$(git rev-parse --short HEAD)
+fi
+
+echo "Using image tag: $TAG"
+
+# Build Docker image
 echo "Building Docker image..."
-docker build -t bigtablelite:latest .
+docker build -t bigtablelite:$TAG .
+
+CURRENT_CONTEXT=$(kubectl config current-context)
+
+# load image to minikube/kind
+if echo "$CURRENT_CONTEXT" | grep -q "minikube"; then
+    echo "Loading image into Minikube..."
+    minikube image load bigtablelite:$TAG
+elif echo "$CURRENT_CONTEXT" | grep -q "kind"; then
+    echo "Loading image into Kind..."
+    kind load docker-image bigtablelite:$TAG
 
 # Detect cluster type and load image
 if kubectl config current-context | grep -q "minikube"; then
