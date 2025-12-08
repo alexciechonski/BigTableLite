@@ -100,6 +100,30 @@ extern "C" bool sstable_get_memtable(const char* key, sstable_bytes* out) {
     return false;
 }
 
+// Delete a value in sstable
+extern "C" bool sstable_delete(const char* key) {
+    if (key == nullptr) {
+        return false;
+    }
+
+    std::string key_str(key);
+    auto it = memtable.find(key_str);
+
+    if (it == memtable.end()) {
+        return false; // Key not found
+    }
+
+    // Decrease memtable size (remove old key+value size)
+    size_t old_size = calculate_kv_size(key_str, it->second);
+    memtable_size -= old_size;
+
+    // Erase from memtable
+    memtable.erase(it);
+
+    return true;
+}
+
+
 // Check if memtable needs flushing
 extern "C" bool sstable_needs_flush() {
     return memtable_size >= MEMTABLE_FLUSH_THRESHOLD;
