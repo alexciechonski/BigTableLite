@@ -55,6 +55,8 @@ func SerializeOperation(operation string, key, value []byte) ([]byte, error) {
 	switch operation {
 	case "set":
 		opType = 0x01
+	case "delete":
+		opType = 0x02
 	default:
 		return nil, fmt.Errorf("unknown operation %q", operation)
 	}
@@ -120,6 +122,8 @@ func DeserializeOperation(entry []byte) (op string, key, value []byte, err error
 	switch opType {
 	case 0x01:
 		op = "set"
+	case 0x02:
+		op = "delete"
 	default:
 		return "", nil, nil, fmt.Errorf("unknown op type")
 	}
