@@ -54,6 +54,18 @@ func main() {
 		} else {
 			fmt.Printf("Get response: Found=false, Message=%s\n", resp.Message)
 		}
+	
+	case "delete":
+		resp, err := client.Delete(ctx, &proto.DeleteRequest{Key: *key})
+		if err != nil {
+			log.Fatalf("Delete failed: %v", err)
+		}
+
+		if resp.Success {
+			fmt.Printf("Delete response: Success=true, Message=%s\n", resp.Message)
+		} else {
+			fmt.Printf("Delete response: Success=false, Message=%s\n", resp.Message)
+		}
 
 	default:
 		log.Fatalf("Unknown operation: %s. Use 'set' or 'get'", *operation)

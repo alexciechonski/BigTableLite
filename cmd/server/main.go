@@ -201,19 +201,69 @@ func (s *BigTableLiteServer) Get(ctx context.Context, req *proto.GetRequest) (*p
 	}, nil
 }
 
+func (s *BigTableLiteServer) Delete(ctx context.Context, req *proto.DeleteRequest) (*proto.DeleteResponse, error) {
+    start := time.Now()
+    defer func() {
+        duration := time.Since(start).Seconds()
+        requestLatency.WithLabelValues("Delete").Observe(duration)
+    }()
+
+    var err error
+    var deleted bool
+
+    if s.useRedis {
+        // Redis DEL returns number of keys removed
+        count, redisErr := s.redisClient.Del(ctx, req.Key).Result()
+        if redisErr != nil {
+            err = redisErr
+        } else if count == 0 {
+            deleted = false
+        } else {
+            deleted = true
+        }
+    } else {
+       err = s.storageEngine.Delete(req.Key)
+	   deleted = err == nil
+    }
+
+    if err != nil {
+        requestCount.WithLabelValues("Delete", "error").Inc()
+        return &proto.DeleteResponse{
+            Success: false,
+            Message: fmt.Sprintf("Failed to delete key: %v", err),
+        }, nil
+    }
+
+    if !deleted {
+        requestCount.WithLabelValues("Delete", "not_found").Inc()
+        return &proto.DeleteResponse{
+            Success: false,
+            Message: "Key not found",
+        }, nil
+    }
+
+    requestCount.WithLabelValues("Delete", "success").Inc()
+    return &proto.DeleteResponse{
+        Success: true,
+        Message: "Key deleted successfully",
+    }, nil
+}
+
+
 func main() {
 	// load environment variables
-	cfg, err := config.Load()
+	var err error
+	config.C, err = config.Load()
 	if err != nil {
 		panic(err)
 	}
 
 	// Support environment variables with flag defaults
-	grpcPort := cfg.GRPCPort
-	metricsPort := cfg.MetricsPort
-	dataDir := cfg.DataDir
-	useRedis := cfg.UseRedis
-	redisAddr := cfg.RedisAddr
+	grpcPort := config.C.GRPCPort
+	metricsPort := config.C.MetricsPort
+	dataDir := config.C.DataDir
+	useRedis := config.C.UseRedis
+	redisAddr := config.C.RedisAddr
 
 	// Create server instance
 	var server *BigTableLiteServer
