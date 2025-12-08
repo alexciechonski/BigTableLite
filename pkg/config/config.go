@@ -20,7 +20,7 @@ type Config struct {
 func Load() (*Config, error) {
 	root := ProjectRoot()
 
-	data, err := os.ReadFile(filepath.Join(root, "config", "config.yaml"))
+	data, err := os.ReadFile("config.yml")
 	if err != nil {
 		return nil, err
 	}
@@ -72,3 +72,4 @@ func ProjectRoot() string {
 }
 
 var C *Config
+// var err error
