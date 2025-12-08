@@ -52,7 +52,11 @@ func NewSSTableEngine(dataDir, WALPath string) (*SSTableEngine, error) {
             C.sstable_put(cKey, cVal)
             C.free(unsafe.Pointer(cKey))
             C.free(unsafe.Pointer(cVal))
-        }
+        } else if op == "delete" {
+			cKey := C.CString(string(key))
+			C.sstable_delete(cKey)
+			C.free(unsafe.Pointer(cKey))
+		}
         return nil
     })
 
@@ -156,4 +160,38 @@ func (e *SSTableEngine) Get(key string) (string, bool, error) {
 	}
 
 	return C.GoStringN(bytes.data, C.int(bytes.len)), true, nil
+}
+
+func (e *SSTableEngine) Delete(key string) error {
+	if !e.initialized {
+		return errors.New("engine not initialized")
+	}
+
+	cKey := C.CString(key)
+	defer C.free(unsafe.Pointer(cKey))
+
+	// Write to WAL first
+	entry, err := wal.SerializeOperation("delete", []byte(key), nil)
+	if err != nil {
+		return err
+	}
+	
+	if err := e.wal.Append(entry); err != nil {
+		return fmt.Errorf("cannot append to WAL: %w", err)
+	}
+
+	// apply to memtable
+	// cKey := C.CString(key)
+	// defer C.free(unsafe.Pointer(cKey))
+
+	if !C.sstable_delete(cKey) {
+		return errors.New("sstable_delete failed")
+	}
+
+	// Check if flushing needed
+	if C.sstable_needs_flush() {
+		return e.Flush()
+	}
+
+	return nil
 }
