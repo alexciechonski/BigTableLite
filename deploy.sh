@@ -38,6 +38,7 @@ if echo "$CURRENT_CONTEXT" | grep -q "minikube"; then
 elif echo "$CURRENT_CONTEXT" | grep -q "kind"; then
     echo "Loading image into Kind..."
     kind load docker-image bigtablelite:$TAG
+fi
 
 # Detect cluster type and load image
 if kubectl config current-context | grep -q "minikube"; then
@@ -92,4 +93,3 @@ else
     echo "  kubectl port-forward svc/prometheus-service 9090:9090"
     echo "  kubectl port-forward svc/grafana-service 3000:3000"
 fi
-
