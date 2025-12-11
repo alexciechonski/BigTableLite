@@ -3,7 +3,8 @@ package config
 import (
 	"os"
 	"path/filepath"
-	"runtime"
+	"strings"
+	// "runtime"
 
 	"gopkg.in/yaml.v3"
 )
@@ -17,10 +18,29 @@ type Config struct {
 	RedisAddr   string `yaml:"redis_addr"`
 }
 
-func Load() (*Config, error) {
-	root := ProjectRoot()
+func defaultConfigPath() string {
+    exe, _ := os.Executable()
+    dir := filepath.Dir(exe)
 
-	data, err := os.ReadFile("config.yml")
+    // If running via `go run`, fallback to local config.yml
+    if strings.Contains(dir, "go-build") {
+        return "config.yml"
+    }
+
+    // Docker / Kubernetes: config lives next to the binary
+    return filepath.Join(dir, "config.yml")
+}
+
+func Load() (*Config, error) {
+	// root := ProjectRoot()
+
+	cfgPath := defaultConfigPath()
+
+    if override := os.Getenv("CONFIG_PATH"); override != "" {
+        cfgPath = override
+    }
+
+	data, err := os.ReadFile(cfgPath)
 	if err != nil {
 		return nil, err
 	}
@@ -31,7 +51,7 @@ func Load() (*Config, error) {
 	}
 
 	cfg.ApplyEnv()
-	cfg.ResolvePaths(root)
+	// cfg.ResolvePaths(root)
 
 	return cfg, nil
 }
@@ -65,11 +85,11 @@ func (c *Config) ResolvePaths(root string) {
 	}
 }
 
-// ProjectRoot returns the absolute path of the project root directory.
-func ProjectRoot() string {
-	_, file, _, _ := runtime.Caller(0)
-	return filepath.Clean(filepath.Join(filepath.Dir(file), "../.."))
-}
+// // ProjectRoot returns the absolute path of the project root directory.
+// func ProjectRoot() string {
+// 	_, file, _, _ := runtime.Caller(0)
+// 	return filepath.Clean(filepath.Join(filepath.Dir(file), "../.."))
+// }
 
 var C *Config
 // var err error

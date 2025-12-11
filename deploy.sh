@@ -17,7 +17,15 @@ if ! kubectl cluster-info &> /dev/null; then
 fi
 
 echo "Building Docker image..."
-docker build -t bigtablelite:latest .
+
+# Use Minikube’s Docker daemon so images are visible inside the cluster
+if kubectl config current-context | grep -q "minikube"; then
+    echo "Switching Docker environment to Minikube..."
+    eval $(minikube -p minikube docker-env)
+fi
+
+# Rebuild Docker image without cache to ensure new code is used
+docker build --no-cache -t bigtablelite:latest .
 
 # Detect cluster type and load image
 if kubectl config current-context | grep -q "minikube"; then
@@ -41,11 +49,12 @@ kubectl apply -f k8s/deployment.yaml
 kubectl apply -f k8s/service.yaml
 
 echo "Waiting for BigTableLite pods to be ready..."
-# Wait for at least 3 ready pods (ignore any failing pods from new replica sets)
-kubectl rollout status deployment/bigtablelite --timeout=120s
-  (echo "Warning: Some pods may not be ready, but deployment is available" && \
-   kubectl get pods -l app=bigtablelite && \
-   kubectl get deployment bigtablelite)
+kubectl rollout status deployment/bigtablelite --timeout=120s || true
+
+# Force Kubernetes to restart the Deployment so new image is used
+echo "Restarting Deployment to ensure updated code is applied..."
+kubectl rollout restart deployment/bigtablelite
+kubectl rollout status deployment/bigtablelite --timeout=180s
 
 echo "Deploying Prometheus..."
 kubectl apply -f k8s/prometheus-deployment.yaml
