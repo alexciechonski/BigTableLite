@@ -38,6 +38,9 @@ else
     echo "Unknown cluster type. Make sure the image is available in your cluster."
 fi
 
+# create ConfigMap from config.yml
+kubectl create configmap my-go-config --from-file=./config.yml --dry-run=client -o yaml | kubectl apply -f -
+
 echo "Deploying Redis..."
 kubectl apply -f k8s/redis-deployment.yaml
 

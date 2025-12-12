@@ -33,6 +33,8 @@ spec:
         env:
         - name: DATA_DIR
           value: "/data"
+        - name: CONFIG_PATH
+          value: /etc/config/config.yml
 
         livenessProbe:
           httpGet:
@@ -56,6 +58,14 @@ spec:
         - name: data
           mountPath: /data
 
+        # mounting config map
+        - name: config-volume
+          mountPath: /etc/config
+          readOnly: true
+        # env:
+        #   - name: CONFIG_PATH
+        #     value: /etc/config/config.yml
+
         resources:
           requests:
             memory: "128Mi"
@@ -67,3 +77,8 @@ spec:
       volumes:
       - name: data
         emptyDir: {}
+      
+      # config volume
+      - name: config-volume
+        configMap:
+          name: my-go-config

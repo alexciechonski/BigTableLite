@@ -3,8 +3,9 @@ package config
 import (
 	"os"
 	"path/filepath"
-	"strings"
+	// "strings"
 	// "runtime"
+	"fmt"
 
 	"gopkg.in/yaml.v3"
 )
@@ -18,27 +19,28 @@ type Config struct {
 	RedisAddr   string `yaml:"redis_addr"`
 }
 
-func defaultConfigPath() string {
-    exe, _ := os.Executable()
-    dir := filepath.Dir(exe)
+// func defaultConfigPath() string {
+//     exe, _ := os.Executable()
+//     dir := filepath.Dir(exe)
 
-    // If running via `go run`, fallback to local config.yml
-    if strings.Contains(dir, "go-build") {
-        return "config.yml"
-    }
+//     // If running via `go run`, fallback to local config.yml
+//     if strings.Contains(dir, "go-build") {
+//         return "config.yml"
+//     }
 
-    // Docker / Kubernetes: config lives next to the binary
-    return filepath.Join(dir, "config.yml")
-}
+//     // Docker / Kubernetes: config lives next to the binary
+//     return filepath.Join(dir, "config.yml")
+// }
 
 func Load() (*Config, error) {
 	// root := ProjectRoot()
 
-	cfgPath := defaultConfigPath()
-
-    if override := os.Getenv("CONFIG_PATH"); override != "" {
-        cfgPath = override
+	cfgPath := os.Getenv("CONFIG_PATH")
+    if cfgPath == "" {
+        cfgPath = "./config.yml" 
     }
+
+	fmt.Println(cfgPath)
 
 	data, err := os.ReadFile(cfgPath)
 	if err != nil {
