@@ -22,18 +22,22 @@ echo "Building Docker image..."
 if kubectl config current-context | grep -q "minikube"; then
     echo "Switching Docker environment to Minikube..."
     eval $(minikube -p minikube docker-env)
+    if [ $? -ne 0 ]; then
+        echo "Error: minikube docker-env setup failed. Aborting."
+        exit 1
+    fi
 fi
 
 # Rebuild Docker image without cache to ensure new code is used
-docker build --no-cache -t bigtablelite:latest .
+docker build --no-cache -t bigtablelite:v1.0.3 .
 
 # Detect cluster type and load image
 if kubectl config current-context | grep -q "minikube"; then
     echo "Loading image into Minikube..."
-    minikube image load bigtablelite:latest
+    minikube image load bigtablelite:v1.0.3
 elif kubectl config current-context | grep -q "kind"; then
     echo "Loading image into Kind..."
-    kind load docker-image bigtablelite:latest
+    kind load docker-image bigtablelite:v1.0.3
 else
     echo "Unknown cluster type. Make sure the image is available in your cluster."
 fi

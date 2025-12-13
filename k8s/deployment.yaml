@@ -17,7 +17,7 @@ spec:
       terminationGracePeriodSeconds: 5 
       containers:
       - name: bigtablelite
-        image: bigtablelite:latest
+        image: bigtablelite:v1.0.3
         imagePullPolicy: Never
         ports:
         - containerPort: 50051

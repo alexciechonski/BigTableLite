@@ -35,9 +35,11 @@ type Config struct {
 func Load() (*Config, error) {
 	// root := ProjectRoot()
 
+	fmt.Println("Loading Config...")
+
 	cfgPath := os.Getenv("CONFIG_PATH")
     if cfgPath == "" {
-        cfgPath = "./config.yml" 
+        cfgPath = "./test.yml" 
     }
 
 	fmt.Println(cfgPath)
