@@ -39,7 +39,7 @@ func Load() (*Config, error) {
 
 	cfgPath := os.Getenv("CONFIG_PATH")
     if cfgPath == "" {
-        cfgPath = "./test.yml" 
+        cfgPath = "./config.yml" 
     }
 
 	fmt.Println(cfgPath)

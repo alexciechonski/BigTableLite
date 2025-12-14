@@ -37,9 +37,11 @@ RUN CGO_ENABLED=1 GOOS=linux go build -v -o bigtablelite ./cmd/server
 
 # Runtime stage
 FROM alpine:latest
-RUN apk --no-cache add ca-certificates libstdc++ libgcc
+RUN apk --no-cache add ca-certificates libstdc++ libgcc \
+    # *** FIX: Add the compatibility package for CGO/dynamic linking ***
+    && apk add --no-cache libc6-compat
 
-# IMPORTANT: binary AND config.yml must live together here
+# binary AND config.yml must live together here
 WORKDIR /app
 
 # Copy the binary

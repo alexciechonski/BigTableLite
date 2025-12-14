@@ -34,7 +34,7 @@ docker build --no-cache -t bigtablelite:v1.0.3 .
 # Detect cluster type and load image
 if kubectl config current-context | grep -q "minikube"; then
     echo "Loading image into Minikube..."
-    minikube image load bigtablelite:v1.0.3
+    # minikube image load bigtablelite:v1.0.3
 elif kubectl config current-context | grep -q "kind"; then
     echo "Loading image into Kind..."
     kind load docker-image bigtablelite:v1.0.3
