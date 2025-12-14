@@ -300,5 +300,33 @@ func TestSStableEngine_Replay(t *testing.T) {
 	cleanupTestEngine(t, engine2)
 }
 
+func TestSSTablePutAndDelete(t *testing.T) {
+	var err error
+
+	// initialize an engine
+	engine := setupTestEngine(t)
+	defer cleanupTestEngine(t, engine)
+
+	// put arbitrary value
+	err = engine.Put("key1", "value1")
+	if err != nil {
+		t.Fatalf("Put failed: %v", err)
+	}
+
+	// delete
+	err = engine.Delete("key1")
+	if err != nil {
+		t.Fatalf("Delete failed: %v", err)
+	}
+
+	// verify it does not exist
+	_, found, err := engine.Get("key1")
+	if err != nil {
+		t.Fatalf("Get failed: %v", err)
+	}
+	if found {
+		t.Fatalf("Value found despite deletion")
+	}
+}
 
 

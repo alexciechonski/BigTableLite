@@ -1,5 +1,5 @@
-wal_path: "pkg/wal/wal.txt"
-data_dir: "./data"
+wal_path: "/data/wal.txt"
+data_dir: "/data"
 grpc_port: "50051"
 metrics_port: "9090"
 use_redis: false

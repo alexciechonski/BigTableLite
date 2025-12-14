@@ -33,24 +33,24 @@ RUN ls -la sstable/*.a && \
     file sstable/libsstable.a
 
 # Build Go binary (cgo must be enabled!)
-# ${SRCDIR} in cgo directives will resolve to /app/pkg/storage
-# From pkg/storage, ../../sstable resolves to /app/sstable
 RUN CGO_ENABLED=1 GOOS=linux go build -v -o bigtablelite ./cmd/server
 
 # Runtime stage
 FROM alpine:latest
-# Install C++ standard library runtime and libgcc (needed for cgo/C++ binary)
-RUN apk --no-cache add ca-certificates libstdc++ libgcc
+RUN apk --no-cache add ca-certificates libstdc++ libgcc \
+    # *** FIX: Add the compatibility package for CGO/dynamic linking ***
+    && apk add --no-cache libc6-compat
 
-WORKDIR /root/
+# binary AND config.yml must live together here
+WORKDIR /app
 
 # Copy the binary
 COPY --from=builder /app/bigtablelite .
+
+# Copy config file into the SAME DIRECTORY
+COPY config.yml .
 
 # Create data directory for SSTable files
 RUN mkdir -p /data
 
 EXPOSE 50051 9090
-
-# Run with SSTable backend by default, data directory mounted
-CMD ["./bigtablelite", "-data-dir", "/data"]

@@ -233,6 +233,104 @@ func (x *GetResponse) GetMessage() string {
 	return ""
 }
 
+// Delete request message
+type DeleteRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Key           string                 `protobuf:"bytes,1,opt,name=key,proto3" json:"key,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *DeleteRequest) Reset() {
+	*x = DeleteRequest{}
+	mi := &file_proto_bigtablelite_proto_msgTypes[4]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DeleteRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DeleteRequest) ProtoMessage() {}
+
+func (x *DeleteRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_bigtablelite_proto_msgTypes[4]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DeleteRequest.ProtoReflect.Descriptor instead.
+func (*DeleteRequest) Descriptor() ([]byte, []int) {
+	return file_proto_bigtablelite_proto_rawDescGZIP(), []int{4}
+}
+
+func (x *DeleteRequest) GetKey() string {
+	if x != nil {
+		return x.Key
+	}
+	return ""
+}
+
+// Delete response message
+type DeleteResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Success       bool                   `protobuf:"varint,1,opt,name=success,proto3" json:"success,omitempty"`
+	Message       string                 `protobuf:"bytes,2,opt,name=message,proto3" json:"message,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *DeleteResponse) Reset() {
+	*x = DeleteResponse{}
+	mi := &file_proto_bigtablelite_proto_msgTypes[5]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DeleteResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DeleteResponse) ProtoMessage() {}
+
+func (x *DeleteResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_bigtablelite_proto_msgTypes[5]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DeleteResponse.ProtoReflect.Descriptor instead.
+func (*DeleteResponse) Descriptor() ([]byte, []int) {
+	return file_proto_bigtablelite_proto_rawDescGZIP(), []int{5}
+}
+
+func (x *DeleteResponse) GetSuccess() bool {
+	if x != nil {
+		return x.Success
+	}
+	return false
+}
+
+func (x *DeleteResponse) GetMessage() string {
+	if x != nil {
+		return x.Message
+	}
+	return ""
+}
+
 var File_proto_bigtablelite_proto protoreflect.FileDescriptor
 
 const file_proto_bigtablelite_proto_rawDesc = "" +
@@ -251,10 +349,16 @@ const file_proto_bigtablelite_proto_rawDesc = "" +
 	"\vGetResponse\x12\x14\n" +
 	"\x05found\x18\x01 \x01(\bR\x05found\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\tR\x05value\x12\x18\n" +
-	"\amessage\x18\x03 \x01(\tR\amessage2\x86\x01\n" +
+	"\amessage\x18\x03 \x01(\tR\amessage\"!\n" +
+	"\rDeleteRequest\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\"D\n" +
+	"\x0eDeleteResponse\x12\x18\n" +
+	"\asuccess\x18\x01 \x01(\bR\asuccess\x12\x18\n" +
+	"\amessage\x18\x02 \x01(\tR\amessage2\xcb\x01\n" +
 	"\fBigTableLite\x12:\n" +
 	"\x03Set\x12\x18.bigtablelite.SetRequest\x1a\x19.bigtablelite.SetResponse\x12:\n" +
-	"\x03Get\x12\x18.bigtablelite.GetRequest\x1a\x19.bigtablelite.GetResponseB\tZ\a./protob\x06proto3"
+	"\x03Get\x12\x18.bigtablelite.GetRequest\x1a\x19.bigtablelite.GetResponse\x12C\n" +
+	"\x06Delete\x12\x1b.bigtablelite.DeleteRequest\x1a\x1c.bigtablelite.DeleteResponseB\tZ\a./protob\x06proto3"
 
 var (
 	file_proto_bigtablelite_proto_rawDescOnce sync.Once
@@ -268,20 +372,24 @@ func file_proto_bigtablelite_proto_rawDescGZIP() []byte {
 	return file_proto_bigtablelite_proto_rawDescData
 }
 
-var file_proto_bigtablelite_proto_msgTypes = make([]protoimpl.MessageInfo, 4)
+var file_proto_bigtablelite_proto_msgTypes = make([]protoimpl.MessageInfo, 6)
 var file_proto_bigtablelite_proto_goTypes = []any{
-	(*SetRequest)(nil),  // 0: bigtablelite.SetRequest
-	(*SetResponse)(nil), // 1: bigtablelite.SetResponse
-	(*GetRequest)(nil),  // 2: bigtablelite.GetRequest
-	(*GetResponse)(nil), // 3: bigtablelite.GetResponse
+	(*SetRequest)(nil),     // 0: bigtablelite.SetRequest
+	(*SetResponse)(nil),    // 1: bigtablelite.SetResponse
+	(*GetRequest)(nil),     // 2: bigtablelite.GetRequest
+	(*GetResponse)(nil),    // 3: bigtablelite.GetResponse
+	(*DeleteRequest)(nil),  // 4: bigtablelite.DeleteRequest
+	(*DeleteResponse)(nil), // 5: bigtablelite.DeleteResponse
 }
 var file_proto_bigtablelite_proto_depIdxs = []int32{
 	0, // 0: bigtablelite.BigTableLite.Set:input_type -> bigtablelite.SetRequest
 	2, // 1: bigtablelite.BigTableLite.Get:input_type -> bigtablelite.GetRequest
-	1, // 2: bigtablelite.BigTableLite.Set:output_type -> bigtablelite.SetResponse
-	3, // 3: bigtablelite.BigTableLite.Get:output_type -> bigtablelite.GetResponse
-	2, // [2:4] is the sub-list for method output_type
-	0, // [0:2] is the sub-list for method input_type
+	4, // 2: bigtablelite.BigTableLite.Delete:input_type -> bigtablelite.DeleteRequest
+	1, // 3: bigtablelite.BigTableLite.Set:output_type -> bigtablelite.SetResponse
+	3, // 4: bigtablelite.BigTableLite.Get:output_type -> bigtablelite.GetResponse
+	5, // 5: bigtablelite.BigTableLite.Delete:output_type -> bigtablelite.DeleteResponse
+	3, // [3:6] is the sub-list for method output_type
+	0, // [0:3] is the sub-list for method input_type
 	0, // [0:0] is the sub-list for extension type_name
 	0, // [0:0] is the sub-list for extension extendee
 	0, // [0:0] is the sub-list for field type_name
@@ -298,7 +406,7 @@ func file_proto_bigtablelite_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_proto_bigtablelite_proto_rawDesc), len(file_proto_bigtablelite_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   4,
+			NumMessages:   6,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

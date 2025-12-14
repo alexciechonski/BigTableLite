@@ -26,6 +26,9 @@ bool sstable_put(const char* key, const char* value);
 // Get a value (checks memtable first, then SSTables)
 bool sstable_get(const char* key, sstable_bytes* out);
 
+// Delete a value (checks memtable first, then SSTables)
+bool sstable_delete(const char* key);
+
 // Get a value from memtable only
 bool sstable_get_memtable(const char* key, sstable_bytes* out);
 

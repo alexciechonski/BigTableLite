@@ -91,3 +91,25 @@ func BenchmarkSSTablePutLargeValue(b *testing.B) {
         _ = engine.Put("large-key", large)
     }
 }
+
+func BenchmarkSSTablePutAndDelete(b *testing.B) {
+    engine, _ := NewSSTableEngine("./benchdata", "./benchdata/wal.txt")
+    defer engine.DestroySSTableEngine()
+
+    // reset timer so setup cost isn't included
+    b.ResetTimer()
+
+    for i := 0; i < b.N; i++ {
+        key := fmt.Sprintf("key_%d", i)
+
+        // Measure Put
+        if err := engine.Put(key, "value"); err != nil {
+            b.Fatalf("Put failed: %v", err)
+        }
+
+        // Measure Delete
+        if err := engine.Delete(key); err != nil {
+            b.Fatalf("Delete failed: %v", err)
+        }
+    }
+}

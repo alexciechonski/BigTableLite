@@ -53,7 +53,7 @@ func TestWrite(t *testing.T) {
         t.Errorf("WAL file contents do not match entry.\nExpected: %x\nGot:      %x", entry, data)
     }
 
-    // Step 5: Deserialize and verify
+    // Deserialize and verify
     op, outKey, outValue, err := DeserializeOperation(data)
     if err != nil {
         t.Fatalf("DeserializeOperation failed: %v", err)

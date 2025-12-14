@@ -19,8 +19,9 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	BigTableLite_Set_FullMethodName = "/bigtablelite.BigTableLite/Set"
-	BigTableLite_Get_FullMethodName = "/bigtablelite.BigTableLite/Get"
+	BigTableLite_Set_FullMethodName    = "/bigtablelite.BigTableLite/Set"
+	BigTableLite_Get_FullMethodName    = "/bigtablelite.BigTableLite/Get"
+	BigTableLite_Delete_FullMethodName = "/bigtablelite.BigTableLite/Delete"
 )
 
 // BigTableLiteClient is the client API for BigTableLite service.
@@ -33,6 +34,8 @@ type BigTableLiteClient interface {
 	Set(ctx context.Context, in *SetRequest, opts ...grpc.CallOption) (*SetResponse, error)
 	// Get a value by key
 	Get(ctx context.Context, in *GetRequest, opts ...grpc.CallOption) (*GetResponse, error)
+	// Delete a key value pair
+	Delete(ctx context.Context, in *DeleteRequest, opts ...grpc.CallOption) (*DeleteResponse, error)
 }
 
 type bigTableLiteClient struct {
@@ -63,6 +66,16 @@ func (c *bigTableLiteClient) Get(ctx context.Context, in *GetRequest, opts ...gr
 	return out, nil
 }
 
+func (c *bigTableLiteClient) Delete(ctx context.Context, in *DeleteRequest, opts ...grpc.CallOption) (*DeleteResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(DeleteResponse)
+	err := c.cc.Invoke(ctx, BigTableLite_Delete_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // BigTableLiteServer is the server API for BigTableLite service.
 // All implementations must embed UnimplementedBigTableLiteServer
 // for forward compatibility.
@@ -73,6 +86,8 @@ type BigTableLiteServer interface {
 	Set(context.Context, *SetRequest) (*SetResponse, error)
 	// Get a value by key
 	Get(context.Context, *GetRequest) (*GetResponse, error)
+	// Delete a key value pair
+	Delete(context.Context, *DeleteRequest) (*DeleteResponse, error)
 	mustEmbedUnimplementedBigTableLiteServer()
 }
 
@@ -88,6 +103,9 @@ func (UnimplementedBigTableLiteServer) Set(context.Context, *SetRequest) (*SetRe
 }
 func (UnimplementedBigTableLiteServer) Get(context.Context, *GetRequest) (*GetResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Get not implemented")
+}
+func (UnimplementedBigTableLiteServer) Delete(context.Context, *DeleteRequest) (*DeleteResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Delete not implemented")
 }
 func (UnimplementedBigTableLiteServer) mustEmbedUnimplementedBigTableLiteServer() {}
 func (UnimplementedBigTableLiteServer) testEmbeddedByValue()                      {}
@@ -146,6 +164,24 @@ func _BigTableLite_Get_Handler(srv interface{}, ctx context.Context, dec func(in
 	return interceptor(ctx, in, info, handler)
 }
 
+func _BigTableLite_Delete_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DeleteRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(BigTableLiteServer).Delete(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: BigTableLite_Delete_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(BigTableLiteServer).Delete(ctx, req.(*DeleteRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // BigTableLite_ServiceDesc is the grpc.ServiceDesc for BigTableLite service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -160,6 +196,10 @@ var BigTableLite_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "Get",
 			Handler:    _BigTableLite_Get_Handler,
+		},
+		{
+			MethodName: "Delete",
+			Handler:    _BigTableLite_Delete_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
