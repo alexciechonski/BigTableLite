@@ -17,12 +17,10 @@ spec:
       terminationGracePeriodSeconds: 5 
       containers:
       - name: bigtablelite
-        image: bigtablelite:1765675964
+        image: bigtablelite:LATEST_BUILD
         imagePullPolicy: Never
         command: ["/bin/sh", "-c"]
         args: ["cd /app && /app/bigtablelite"]
-        # command: ["/bin/sh", "-c"]
-        # args: ["sleep 3600"]
         ports:
         - containerPort: 50051
           name: grpc

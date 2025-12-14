@@ -18,6 +18,11 @@ fi
 
 echo "Building Docker image..."
 
+# Define a unique, dynamic tag for this build
+IMAGE_TAG=$(date +%Y%m%d-%H%M%S)
+IMAGE_FULL_NAME="bigtablelite:$IMAGE_TAG"
+echo "Using image tag: $IMAGE_FULL_NAME"
+
 # Use Minikube’s Docker daemon so images are visible inside the cluster
 if kubectl config current-context | grep -q "minikube"; then
     echo "Switching Docker environment to Minikube..."
@@ -29,20 +34,19 @@ if kubectl config current-context | grep -q "minikube"; then
 fi
 
 # Rebuild Docker image without cache to ensure new code is used
-docker build --no-cache -t bigtablelite:v1.0.3 .
+docker build --no-cache -t $IMAGE_FULL_NAME .
 
 # Detect cluster type and load image
 if kubectl config current-context | grep -q "minikube"; then
-    echo "Loading image into Minikube..."
-    # minikube image load bigtablelite:v1.0.3
+    echo "Image built directly into Minikube's Docker daemon."
 elif kubectl config current-context | grep -q "kind"; then
     echo "Loading image into Kind..."
-    kind load docker-image bigtablelite:v1.0.3
+    kind load docker-image $IMAGE_FULL_NAME
 else
-    echo "Unknown cluster type. Make sure the image is available in your cluster."
+    echo "Unknown cluster type. Making sure the image is available in your cluster."
 fi
 
-# create ConfigMap from config.yml
+# create ConfigMap from config.yml (ConfigMap is created first)
 kubectl create configmap my-go-config --from-file=./config.yml --dry-run=client -o yaml | kubectl apply -f -
 
 echo "Deploying Redis..."
@@ -51,16 +55,19 @@ kubectl apply -f k8s/redis-deployment.yaml
 echo "Waiting for Redis to be ready..."
 kubectl wait --for=condition=ready pod -l app=redis --timeout=60s
 
+# Inject the new image tag into the deployment YAML
+echo "Updating deployment YAML with new tag: $IMAGE_TAG"
+DEPLOY_FILE="k8s/deployment.yaml"
+TEMP_DEPLOY_FILE="/tmp/bigtablelite-deployment-$IMAGE_TAG.yaml"
+
+# Replace the LATEST_BUILD placeholder with the dynamic tag
+sed "s|bigtablelite:LATEST_BUILD|$IMAGE_FULL_NAME|g" $DEPLOY_FILE > $TEMP_DEPLOY_FILE
+
 echo "Deploying BigTableLite..."
-kubectl apply -f k8s/deployment.yaml
+kubectl apply -f $TEMP_DEPLOY_FILE
 kubectl apply -f k8s/service.yaml
 
 echo "Waiting for BigTableLite pods to be ready..."
-kubectl rollout status deployment/bigtablelite --timeout=120s || true
-
-# Force Kubernetes to restart the Deployment so new image is used
-echo "Restarting Deployment to ensure updated code is applied..."
-kubectl rollout restart deployment/bigtablelite
 kubectl rollout status deployment/bigtablelite --timeout=180s
 
 echo "Deploying Prometheus..."
