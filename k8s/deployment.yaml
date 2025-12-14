@@ -14,24 +14,30 @@ spec:
       labels:
         app: bigtablelite
     spec:
+      terminationGracePeriodSeconds: 5 
       containers:
       - name: bigtablelite
-        image: bigtablelite:latest
+        image: bigtablelite:LATEST_BUILD
         imagePullPolicy: Never
+        command: ["/bin/sh", "-c"]
+        args: ["cd /app && /app/bigtablelite"]
         ports:
         - containerPort: 50051
           name: grpc
         - containerPort: 9090
           name: metrics
+
+        lifecycle:
+          preStop:
+            exec:
+              command: ["/bin/sh", "-c", "sleep 2"]
+
         env:
         - name: DATA_DIR
           value: "/data"
-        # Uncomment to use Redis backend instead of SSTable:
-        # - name: REDIS_ADDR
-        #   value: "redis-service:6379"
-        # - name: USE_REDIS
-        #   value: "true"
-        # Note: Using CMD from Dockerfile which includes -data-dir /data
+        - name: CONFIG_PATH
+          value: /etc/config/config.yml
+
         livenessProbe:
           httpGet:
             path: /metrics
@@ -40,6 +46,7 @@ spec:
           periodSeconds: 10
           timeoutSeconds: 5
           failureThreshold: 3
+
         readinessProbe:
           httpGet:
             path: /metrics
@@ -48,9 +55,19 @@ spec:
           periodSeconds: 5
           timeoutSeconds: 3
           failureThreshold: 3
+
         volumeMounts:
         - name: data
           mountPath: /data
+
+        # mounting config map
+        - name: config-volume
+          mountPath: /etc/config
+          readOnly: true
+        # env:
+        #   - name: CONFIG_PATH
+        #     value: /etc/config/config.yml
+
         resources:
           requests:
             memory: "128Mi"
@@ -58,7 +75,12 @@ spec:
           limits:
             memory: "256Mi"
             cpu: "200m"
+
       volumes:
       - name: data
         emptyDir: {}
-
+      
+      # config volume
+      - name: config-volume
+        configMap:
+          name: my-go-config

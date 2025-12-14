@@ -16,39 +16,38 @@ if ! kubectl cluster-info &> /dev/null; then
     exit 1
 fi
 
-# Select tag: --dev uses latest, otherwise use git SHA
-if [[ "$1" == "--dev" ]]; then
-    TAG="latest"
-else
-    TAG=$(git rev-parse --short HEAD)
+echo "Building Docker image..."
+
+# Define a unique, dynamic tag for this build
+IMAGE_TAG=$(date +%Y%m%d-%H%M%S)
+IMAGE_FULL_NAME="bigtablelite:$IMAGE_TAG"
+echo "Using image tag: $IMAGE_FULL_NAME"
+
+# Use Minikube’s Docker daemon so images are visible inside the cluster
+if kubectl config current-context | grep -q "minikube"; then
+    echo "Switching Docker environment to Minikube..."
+    eval $(minikube -p minikube docker-env)
+    if [ $? -ne 0 ]; then
+        echo "Error: minikube docker-env setup failed. Aborting."
+        exit 1
+    fi
 fi
 
-echo "Using image tag: $TAG"
-
-# Build Docker image
-echo "Building Docker image..."
-docker build -t bigtablelite:$TAG .
-
-CURRENT_CONTEXT=$(kubectl config current-context)
-
-# load image to minikube/kind
-if echo "$CURRENT_CONTEXT" | grep -q "minikube"; then
-    echo "Loading image into Minikube..."
-    minikube image load bigtablelite:$TAG
-elif echo "$CURRENT_CONTEXT" | grep -q "kind"; then
-    echo "Loading image into Kind..."
-    kind load docker-image bigtablelite:$TAG
+# Rebuild Docker image without cache to ensure new code is used
+docker build --no-cache -t $IMAGE_FULL_NAME .
 
 # Detect cluster type and load image
 if kubectl config current-context | grep -q "minikube"; then
-    echo "Loading image into Minikube..."
-    minikube image load bigtablelite:latest
+    echo "Image built directly into Minikube's Docker daemon."
 elif kubectl config current-context | grep -q "kind"; then
     echo "Loading image into Kind..."
-    kind load docker-image bigtablelite:latest
+    kind load docker-image $IMAGE_FULL_NAME
 else
-    echo "Unknown cluster type. Make sure the image is available in your cluster."
+    echo "Unknown cluster type. Making sure the image is available in your cluster."
 fi
+
+# create ConfigMap from config.yml (ConfigMap is created first)
+kubectl create configmap my-go-config --from-file=./config.yml --dry-run=client -o yaml | kubectl apply -f -
 
 echo "Deploying Redis..."
 kubectl apply -f k8s/redis-deployment.yaml
@@ -56,16 +55,20 @@ kubectl apply -f k8s/redis-deployment.yaml
 echo "Waiting for Redis to be ready..."
 kubectl wait --for=condition=ready pod -l app=redis --timeout=60s
 
+# Inject the new image tag into the deployment YAML
+echo "Updating deployment YAML with new tag: $IMAGE_TAG"
+DEPLOY_FILE="k8s/deployment.yaml"
+TEMP_DEPLOY_FILE="/tmp/bigtablelite-deployment-$IMAGE_TAG.yaml"
+
+# Replace the LATEST_BUILD placeholder with the dynamic tag
+sed "s|bigtablelite:LATEST_BUILD|$IMAGE_FULL_NAME|g" $DEPLOY_FILE > $TEMP_DEPLOY_FILE
+
 echo "Deploying BigTableLite..."
-kubectl apply -f k8s/deployment.yaml
+kubectl apply -f $TEMP_DEPLOY_FILE
 kubectl apply -f k8s/service.yaml
 
 echo "Waiting for BigTableLite pods to be ready..."
-# Wait for at least 3 ready pods (ignore any failing pods from new replica sets)
-kubectl rollout status deployment/bigtablelite --timeout=120s
-  (echo "Warning: Some pods may not be ready, but deployment is available" && \
-   kubectl get pods -l app=bigtablelite && \
-   kubectl get deployment bigtablelite)
+kubectl rollout status deployment/bigtablelite --timeout=180s
 
 echo "Deploying Prometheus..."
 kubectl apply -f k8s/prometheus-deployment.yaml
@@ -92,4 +95,3 @@ else
     echo "  kubectl port-forward svc/prometheus-service 9090:9090"
     echo "  kubectl port-forward svc/grafana-service 3000:3000"
 fi
-
