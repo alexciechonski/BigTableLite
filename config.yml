@@ -4,3 +4,5 @@ grpc_port: "50051"
 metrics_port: "9090"
 use_redis: false
 redis_addr: "localhost:6379"
+shard_count: 4
+shard_config_path: "shard-config.yaml"
