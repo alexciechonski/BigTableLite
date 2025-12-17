@@ -15,8 +15,9 @@ type Config struct {
 	MetricsPort string `yaml:"metrics_port"`
 	UseRedis    bool   `yaml:"use_redis"`
 	RedisAddr   string `yaml:"redis_addr"`
+	ShardCount int     `yaml: "shard_count"`
+	ShardConfigPath string `yaml: "shard_config_path"`
 }
-
 
 func Load() (*Config, error) {
 
