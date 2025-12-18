@@ -1,46 +1,62 @@
 package config
 
 import (
-	"github.com/go-yaml/yaml"
+	"fmt"
+	"os"
 
-	"github.com/alexciechonski/BigTableLite/pkg/storage/sstable.go"
-	"github.com/alexciechonski/BigTableLite/pkg/sharding/shard.go"
-	"github.com/alexciechonski/BigTableLite/pkg/condig/config.go"
-
+	"gopkg.in/yaml.v3"
 )
 
-func LoadShardArray() Shard[] error {
-	// Load shard-config.yaml filepath
-	config.C, err = config.Load()
+type ShardDescriptor struct {
+	ID      int    `yaml:"id"`
+	Address string `yaml:"address"`
+}
+
+type Cluster struct {
+	Shards []ShardDescriptor
+}
+
+// helper type to match the YAML shape
+type rawShard map[string][]map[string]interface{}
+
+// LoadCluster loads shard metadata from a YAML file
+func LoadCluster(path string) (*Cluster, error) {
+	data, err := os.ReadFile(path)
 	if err != nil {
-		panic(err)
-	}
-	shardConfigPath := config.C.ShardConfigPath
-	dataDir := config.C.DataDir
-	WALPath := config.C.WALPath
-
-	// read file
-	data, err := os.ReadFile(shardConfigPath)
-	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("read cluster config: %w", err)
 	}
 
-	shardConfig := make(map[any]any)
-	if err := yaml.Unmarshal(data, shardConfig); err != nil {
-		return nil, err
+	var raw rawShard
+	if err := yaml.Unmarshal(data, &raw); err != nil {
+		return nil, fmt.Errorf("unmarshal cluster config: %w", err)
 	}
 
-	// Create shard array
-	shardArr := []Shard{}
-	for _, attrMap := range shardConfig {
-		currEngine := NewSSTableEngine(DataDir, WALPath)
-		currShard := Shard{
-			id: attrMap[id],
-			address: attrMap[address],
-			engine: currEngine
+	cluster := &Cluster{}
+
+	for _, entries := range raw {
+		var sd ShardDescriptor
+
+		for _, field := range entries {
+			if v, ok := field["id"]; ok {
+				sd.ID = v.(int)
+			}
+			if v, ok := field["address"]; ok {
+				sd.Address = v.(string)
+			}
 		}
-		shardArr = append(shardArr, currShard)
+
+		cluster.Shards = append(cluster.Shards, sd)
 	}
 
-	return shardArr, nil
+	return cluster, nil
+}
+
+// GetShardByID returns shard metadata for a given shard ID
+func (c *Cluster) GetShardByID(id int) (ShardDescriptor, error) {
+	for _, shard := range c.Shards {
+		if shard.ID == id {
+			return shard, nil
+		}
+	}
+	return ShardDescriptor{}, fmt.Errorf("shard %d not found", id)
 }
