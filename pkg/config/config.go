@@ -64,16 +64,5 @@ func (c *Config) ApplyEnv() {
 	}
 }
 
-// ResolvePaths converts relative paths to absolute using project root.
-func (c *Config) ResolvePaths(root string) {
-	if !filepath.IsAbs(c.WALPath) {
-		c.WALPath = filepath.Join(root, c.WALPath)
-	}
-	if !filepath.IsAbs(c.DataDir) {
-		c.DataDir = filepath.Join(root, c.DataDir)
-	}
-}
-
-
 var C *Config
 
