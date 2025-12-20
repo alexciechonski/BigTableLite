@@ -6,28 +6,75 @@ import (
 	"fmt"
 	"log"
 	"time"
+	"os"
+	"gopkg.in/yaml.v3"
 
 	"github.com/alexciechonski/BigTableLite/proto"
+	"github.com/alexciechonski/BigTableLite/pkg/config/config.go"
+	"github.com/alexciechonski/BigTableLite/pkg/config/cluster.go"
+	"github.com/alexciechonski/BigTableLite/pkg/sharding/shard_map.go"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 )
 
+func closeConnections(conns map[int]*grpc.ClientConn) {
+	for id, conn := range conns {
+		if err := conn.Close(); err != nil {
+			log.Printf("failed to close connection for shard %d: %v", id, err)
+		}
+	}
+}
+
 func main() {
-	serverAddr := flag.String("server", "localhost:50051", "gRPC server address")
 	operation := flag.String("op", "get", "Operation: 'set' or 'get'")
 	key := flag.String("key", "test", "Key")
 	value := flag.String("value", "hello", "Value (for set operation)")
 	flag.Parse()
 
-	// Connect to gRPC server
-	conn, err := grpc.NewClient(*serverAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	// load config
+	cfg, err = config.Load()
 	if err != nil {
-		log.Fatalf("Failed to connect: %v", err)
+		panic(err)
 	}
-	defer conn.Close()
 
-	client := proto.NewBigTableLiteClient(conn)
+	// create a shard map
+	shardConfigPath := cfg.ShardConfigPath
+	cluster, err := config.LoadCluster(shardConfigPath)
+
+	if err != nil {
+		log.Fatalf("unable to load cluster: %v", err)
+	}
+
+	shardMap, err := NewShardMap(cluster.Shards)
+	if err != nil {
+		log.Fatalf("unable to create a shard map: %v", err)
+	}
+
+	// create and map connections
+	clients := make(map[int]proto.BigTableLiteClient)
+	conns := make(map[int]*grpc.ClientConn)
+
+	for _, sd := range cluster.Shards {
+		conn, err := grpc.Dial(
+			sd.Address,
+			grpc.WithTransportCredentials(insecure.NewCredentials()),
+		)
+		if err != nil {
+			log.Fatalf("failed to connect to shard %d: %v", sd.ID, err)
+		}
+
+		clients[sd.ID] = proto.NewBigTableLiteClient(conn)
+	}
+	defer closeConnections(clients)
+
+	// routing
+	target := shardMap.Resolve(key)
+	client, ok := clients[target.ID]
+	if !ok {
+		log.Fatalf("no client found for shard %d", target.ID)
+	}
+	
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
