@@ -2,7 +2,6 @@ package config
 
 import (
 	"os"
-	"path/filepath"
 	"fmt"
 
 	"gopkg.in/yaml.v3"
