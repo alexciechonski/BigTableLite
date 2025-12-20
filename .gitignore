@@ -3,6 +3,7 @@ bigtablelite
 .env
 **/wal.txt
 **_bench.txt
+bin/
 
 # C++ build artifacts
 sstable/*.o

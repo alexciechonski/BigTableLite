@@ -30,7 +30,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	clusterCfg, err := cluster.LoadCluster(cfg.ShardConfigPath)
+	clusterCfg, err := config.LoadCluster(cfg.ShardConfigPath)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -59,7 +59,7 @@ func main() {
 	}
 
 	metricsSrv := &http.Server{
-		Addr:    ":" + strconv.Itoa(cfg.MetricsPort+shard.ID),
+		Addr:    ":" + cfg.MetricsPort + strconv.Itoa(shard.ID),
 		Handler: server.MetricsHandler(),
 	}
 
