@@ -12,7 +12,6 @@ import (
 	"time"
 
 	"github.com/alexciechonski/BigTableLite/pkg/config"
-	"github.com/alexciechonski/BigTableLite/pkg/config/cluster"
 	"github.com/alexciechonski/BigTableLite/pkg/server"
 	"github.com/alexciechonski/BigTableLite/pkg/storage"
 	"github.com/alexciechonski/BigTableLite/proto"

@@ -10,9 +10,8 @@ import (
 	"gopkg.in/yaml.v3"
 
 	"github.com/alexciechonski/BigTableLite/proto"
-	"github.com/alexciechonski/BigTableLite/pkg/config/config.go"
-	"github.com/alexciechonski/BigTableLite/pkg/config/cluster.go"
-	"github.com/alexciechonski/BigTableLite/pkg/sharding/shard_map.go"
+	"github.com/alexciechonski/BigTableLite/pkg/config"
+	"github.com/alexciechonski/BigTableLite/pkg/sharding"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
@@ -74,7 +73,7 @@ func main() {
 	if !ok {
 		log.Fatalf("no client found for shard %d", target.ID)
 	}
-	
+
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 

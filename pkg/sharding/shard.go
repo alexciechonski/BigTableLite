@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/alexciechonski/BigTableLite/pkg/storage/sstable.go"
+	"github.com/alexciechonski/BigTableLite/pkg/storage"
 )
 
 type Shard struct {
