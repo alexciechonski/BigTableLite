@@ -62,15 +62,6 @@ func init() {
 	prometheus.MustRegister(requestLatency)
 }
 
-// getEnv gets an environment variable or returns a default value 
-// is this necessary?
-func getEnv(key, defaultValue string) string {
-	if value := os.Getenv(key); value != "" {
-		return value
-	}
-	return defaultValue
-}
-
 // BigTableLiteServer implements the gRPC service
 type BigTableLiteServer struct {
 	proto.UnimplementedBigTableLiteServer
