@@ -76,3 +76,20 @@ kubectl apply -f k8s/grafana-deployment.yaml
 
 echo ""
 echo "Deployment complete!"
+
+echo "Status:"
+kubectl get pods -l app=bigtablelite
+kubectl get svc bigtablelite-service
+
+echo ""
+echo "Access services:"
+if kubectl config current-context | grep -q "minikube"; then
+    echo "  gRPC:   minikube service bigtablelite-service --url"
+    echo "  Prometheus: minikube service prometheus-service --url"
+    echo "  Grafana:   minikube service grafana-service --url"
+else
+    echo "  Use kubectl port-forward to access services:"
+    echo "  kubectl port-forward svc/bigtablelite-service 50051:50051"
+    echo "  kubectl port-forward svc/prometheus-service 9090:9090"
+    echo "  kubectl port-forward svc/grafana-service 3000:3000"
+fi
