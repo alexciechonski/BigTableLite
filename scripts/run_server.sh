@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 set -e
 
+echo "Building shard_server..."
+go build -o bin/shard_server ./cmd/shard_server
+
 CONFIG_FILE="config.yml"
 BINARY="./bin/shard_server"
 
