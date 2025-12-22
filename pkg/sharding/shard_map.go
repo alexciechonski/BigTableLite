@@ -4,13 +4,14 @@ import (
 	"hash/fnv"
 	"fmt"
 
+	"github.com/alexciechonski/BigTableLite/pkg/config"
 )
 
 type ShardMap struct {
-	shards []Shard
+	shards []config.ShardDescriptor
 }
 
-func NewShardMap(shards []Shard) (*ShardMap, error) {
+func NewShardMap(shards []config.ShardDescriptor) (*ShardMap, error) {
 	if len(shards) == 0 {
 		return nil, fmt.Errorf("shard map must contain at least one shard")
 	}
@@ -20,7 +21,7 @@ func NewShardMap(shards []Shard) (*ShardMap, error) {
 	}, nil
 }
 
-func (sm *ShardMap) Resolve(key string) Shard {
+func (sm *ShardMap) Resolve(key string) config.ShardDescriptor {
 	h := fnv.New32a()
 	_, _ = h.Write([]byte(key))
 

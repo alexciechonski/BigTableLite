@@ -66,7 +66,7 @@ func main() {
 	defer closeConnections(conns)
 
 	// routing
-	target := shardMap.Resolve(key)
+	target := shardMap.Resolve(*key)
 	client, ok := clients[target.ID]
 	if !ok {
 		log.Fatalf("no client found for shard %d", target.ID)
