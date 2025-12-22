@@ -3,19 +3,20 @@ package config
 import (
 	"os"
 	"fmt"
+	"strconv"
 
 	"gopkg.in/yaml.v3"
 )
 
 type Config struct {
-	WALPath     string `yaml:"wal_path"`
-	DataDir     string `yaml:"data_dir"`
-	GRPCPort    string `yaml:"grpc_port"`
-	MetricsPort string `yaml:"metrics_port"`
-	UseRedis    bool   `yaml:"use_redis"`
-	RedisAddr   string `yaml:"redis_addr"`
-	ShardCount int     `yaml: "shard_count"`
-	ShardConfigPath string `yaml: "shard_config_path"`
+    WALPath         string `yaml:"wal_path"`
+    DataDir         string `yaml:"data_dir"`
+    GRPCPort        string `yaml:"grpc_port"`
+    MetricsPort     string `yaml:"metrics_port"`
+    UseRedis        bool   `yaml:"use_redis"`
+    RedisAddr       string `yaml:"redis_addr"`
+    ShardCount      int    `yaml:"shard_count"`
+    ShardConfigPath string `yaml:"shard_config_path"`
 }
 
 func Load() (*Config, error) {
@@ -53,14 +54,21 @@ func (c *Config) ApplyEnv() {
 	}
 
 	override("WAL_PATH", &c.WALPath)
-	override("DATA_DIR", &c.DataDir)
-	override("GRPC_PORT", &c.GRPCPort)
-	override("METRICS_PORT", &c.MetricsPort)
-	override("REDIS_ADDR", &c.RedisAddr)
+    override("DATA_DIR", &c.DataDir)
+    override("GRPC_PORT", &c.GRPCPort)
+    override("METRICS_PORT", &c.MetricsPort)
+    override("REDIS_ADDR", &c.RedisAddr)
+    override("SHARD_CONFIG_PATH", &c.ShardConfigPath)
 
-	if v, ok := os.LookupEnv("USE_REDIS"); ok {
-		c.UseRedis = (v == "true" || v == "1")
-	}
+    if v, ok := os.LookupEnv("SHARD_COUNT"); ok {
+        if i, err := strconv.Atoi(v); err == nil {
+            c.ShardCount = i
+        }
+    }
+
+    if v, ok := os.LookupEnv("USE_REDIS"); ok {
+        c.UseRedis = (v == "true" || v == "1")
+    }
 }
 
 var C *Config

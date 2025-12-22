@@ -40,13 +40,24 @@ func main() {
 		log.Fatal(err)
 	}
 
-	engine, err := storage.NewSSTableEngine(
-		cfg.DataDir+"/shard"+strconv.Itoa(shard.ID),
-		cfg.WALPath+"/shard"+strconv.Itoa(shard.ID),
-	)
-	if err != nil {
-		log.Fatal(err)
-	}
+	// Create wal directories
+    dataDir := cfg.DataDir + "/shard" + strconv.Itoa(shard.ID)
+    walDir  := cfg.WALPath // This should be the base directory, e.g., "./data/wal"
+
+    if err := os.MkdirAll(dataDir, 0755); err != nil {
+        log.Fatalf("failed to create data dir: %v", err)
+    }
+    if err := os.MkdirAll(walDir, 0755); err != nil {
+        log.Fatalf("failed to create wal base dir: %v", err)
+    }
+
+    // Define the WAL FILE path (pointing to a file inside the walDir)
+    walFile := walDir + "/shard" + strconv.Itoa(shard.ID) + ".log"
+
+	engine, err := storage.NewSSTableEngine(dataDir, walFile)
+    if err != nil {
+        log.Fatal(err)
+    }
 
 	handler := server.NewWithSSTable(engine)
 
