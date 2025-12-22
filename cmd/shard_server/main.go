@@ -10,6 +10,7 @@ import (
 	"strconv"
 	"syscall"
 	"time"
+	"fmt"
 
 	"github.com/alexciechonski/BigTableLite/pkg/config"
 	"github.com/alexciechonski/BigTableLite/pkg/server"
@@ -41,20 +42,17 @@ func main() {
 	}
 
 	// Create wal directories
-    dataDir := cfg.DataDir + "/shard" + strconv.Itoa(shard.ID)
-    walDir  := cfg.WALPath // This should be the base directory, e.g., "./data/wal"
+    shardDir := fmt.Sprintf("%s/shard%d", cfg.DataDir, shard.ID)
 
-    if err := os.MkdirAll(dataDir, 0755); err != nil {
-        log.Fatalf("failed to create data dir: %v", err)
-    }
-    if err := os.MkdirAll(walDir, 0755); err != nil {
-        log.Fatalf("failed to create wal base dir: %v", err)
+    // Create the shard directory (e.g., ./data/shard0)
+    if err := os.MkdirAll(shardDir, 0755); err != nil {
+        log.Fatalf("failed to create shard directory: %v", err)
     }
 
-    // Define the WAL FILE path (pointing to a file inside the walDir)
-    walFile := walDir + "/shard" + strconv.Itoa(shard.ID) + ".log"
+    // Define the WAL file path INSIDE that shard directory
+    walFile := shardDir + "/wal.log"
 
-	engine, err := storage.NewSSTableEngine(dataDir, walFile)
+	engine, err := storage.NewSSTableEngine(shardDir, walFile)
     if err != nil {
         log.Fatal(err)
     }
