@@ -4,7 +4,6 @@ import (
 	"hash/fnv"
 	"fmt"
 
-	"github.com/alexciechonski/BigTableLite/pkg/sharding"
 )
 
 type ShardMap struct {
