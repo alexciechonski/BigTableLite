@@ -2,7 +2,6 @@ package config
 
 import (
 	"os"
-	"fmt"
 	"strconv"
 
 	"gopkg.in/yaml.v3"
@@ -21,14 +20,10 @@ type Config struct {
 
 func Load() (*Config, error) {
 
-	fmt.Println("Loading Config...")
-
 	cfgPath := os.Getenv("CONFIG_PATH")
     if cfgPath == "" {
         cfgPath = "./config.yml" 
     }
-
-	fmt.Println(cfgPath)
 
 	data, err := os.ReadFile(cfgPath)
 	if err != nil {
