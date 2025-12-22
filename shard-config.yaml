@@ -1,18 +1,14 @@
 shard0: 
   - id: 0
-  - address: "localhost:5000"
-
+  - address: ":50051"
 shard1: 
   - id: 1
-  - address: "localhost:5001"
-
+  - address: ":50051"
 shard2: 
   - id: 2
-  - address: "localhost:5002"
-
+  - address: ":50051"
 shard3: 
   - id: 3
-  - address: "localhost:5003"
-
+  - address: ":50051"
 
 

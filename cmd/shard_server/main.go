@@ -7,7 +7,6 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
-	"strconv"
 	"syscall"
 	"time"
 	"fmt"
@@ -71,13 +70,13 @@ func main() {
 	grpcSrv := server.NewGRPCServer()
 	proto.RegisterBigTableLiteServer(grpcSrv, handler)
 
-	grpcListener, err := server.NewListener(shard.Address)
+	grpcListener, err := server.NewListener(":" + cfg.GRPCPort)
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	metricsSrv := &http.Server{
-		Addr:    ":" + cfg.MetricsPort + strconv.Itoa(shard.ID),
+		Addr:    ":" + cfg.MetricsPort,
 		Handler: server.MetricsHandler(),
 	}
 
