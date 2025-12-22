@@ -6,8 +6,6 @@ import (
 	"fmt"
 	"log"
 	"time"
-	"os"
-	"gopkg.in/yaml.v3"
 
 	"github.com/alexciechonski/BigTableLite/proto"
 	"github.com/alexciechonski/BigTableLite/pkg/config"
@@ -32,7 +30,7 @@ func main() {
 	flag.Parse()
 
 	// load config
-	cfg, err = config.Load()
+	cfg, err := config.Load()
 	if err != nil {
 		panic(err)
 	}
@@ -45,7 +43,7 @@ func main() {
 		log.Fatalf("unable to load cluster: %v", err)
 	}
 
-	shardMap, err := NewShardMap(cluster.Shards)
+	shardMap, err := sharding.NewShardMap(cluster.Shards)
 	if err != nil {
 		log.Fatalf("unable to create a shard map: %v", err)
 	}
@@ -65,7 +63,7 @@ func main() {
 
 		clients[sd.ID] = proto.NewBigTableLiteClient(conn)
 	}
-	defer closeConnections(clients)
+	defer closeConnections(conns)
 
 	// routing
 	target := shardMap.Resolve(key)
