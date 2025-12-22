@@ -3,6 +3,8 @@ package config
 import (
 	"os"
 	"strconv"
+    "path/filepath"
+    "fmt"
 
 	"gopkg.in/yaml.v3"
 )
@@ -35,7 +37,14 @@ func Load() (*Config, error) {
 		return nil, err
 	}
 
+    if !filepath.IsAbs(cfg.ShardConfigPath) {
+		configDir := filepath.Dir(cfgPath)
+		cfg.ShardConfigPath = filepath.Join(configDir, cfg.ShardConfigPath)
+	}
+
 	cfg.ApplyEnv()
+
+    fmt.Println("Final ShardConfigPath:", cfg.ShardConfigPath)
 
 	return cfg, nil
 }

@@ -33,7 +33,7 @@ RUN ls -la sstable/*.a && \
     file sstable/libsstable.a
 
 # Build Go binary (cgo must be enabled!)
-RUN CGO_ENABLED=1 GOOS=linux go build -v -o bigtablelite ./cmd/server
+RUN CGO_ENABLED=1 GOOS=linux go build -v -o bigtablelite ./cmd/shard_server
 
 # Runtime stage
 FROM alpine:latest
@@ -54,3 +54,6 @@ COPY config.yml .
 RUN mkdir -p /data
 
 EXPOSE 50051 9090
+
+# Run a single shard 
+ENTRYPOINT ["/bin/sh", "-c", "/app/bigtablelite --shard-id=${SHARD_ID}"]

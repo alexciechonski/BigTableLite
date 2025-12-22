@@ -1,11 +1,12 @@
 apiVersion: apps/v1
-kind: Deployment
+kind: StatefulSet
 metadata:
   name: bigtablelite
   labels:
     app: bigtablelite
 spec:
-  replicas: 1
+  serviceName: "bigtablelite" 
+  replicas: 3 
   selector:
     matchLabels:
       app: bigtablelite
@@ -20,7 +21,12 @@ spec:
         image: bigtablelite:LATEST_BUILD
         imagePullPolicy: Never
         command: ["/bin/sh", "-c"]
-        args: ["cd /app && /app/bigtablelite"]
+        # Logic: Extract the number from the end of the Pod name and pass it as shard-id
+        args: 
+          - |
+            SHARD_ID=${HOSTNAME##*-}
+            echo "Starting shard $SHARD_ID"
+            /app/bigtablelite --shard-id=$SHARD_ID
         ports:
         - containerPort: 50051
           name: grpc
@@ -37,6 +43,12 @@ spec:
           value: "/data"
         - name: CONFIG_PATH
           value: /etc/config/config.yml
+        - name: SHARD_CONFIG_PATH
+          value: "/etc/config/shard-config.yaml"
+        - name: HOSTNAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
 
         livenessProbe:
           httpGet:
@@ -59,14 +71,9 @@ spec:
         volumeMounts:
         - name: data
           mountPath: /data
-
-        # mounting config map
         - name: config-volume
           mountPath: /etc/config
           readOnly: true
-        # env:
-        #   - name: CONFIG_PATH
-        #     value: /etc/config/config.yml
 
         resources:
           requests:
@@ -78,9 +85,7 @@ spec:
 
       volumes:
       - name: data
-        emptyDir: {}
-      
-      # config volume
+        emptyDir: {} # Use PersistentVolumeClaim for production data
       - name: config-volume
         configMap:
           name: my-go-config
