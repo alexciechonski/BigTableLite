@@ -18,6 +18,21 @@ import (
 	"github.com/alexciechonski/BigTableLite/proto"
 )
 
+func CreateDataDirectory(dataBaseDir string, shardID int) (string, string, error) {
+	// Create wal directories
+    shardDir := fmt.Sprintf("%s/shard%d", dataBaseDir, shardID)
+
+    // Create the shard directory (e.g., ./data/shard0)
+    if err := os.MkdirAll(shardDir, 0755); err != nil {
+        return "", "", err
+    }
+
+    // Define the WAL file path INSIDE that shard directory
+    walFile := shardDir + "/wal.log"
+
+	return shardDir, walFile, nil
+}
+
 func main() {
 	shardID := flag.Int("shard-id", -1, "Shard ID")
 	flag.Parse()
@@ -41,16 +56,10 @@ func main() {
 		log.Fatal(err)
 	}
 
-	// Create wal directories
-    shardDir := fmt.Sprintf("%s/shard%d", cfg.DataDir, shard.ID)
-
-    // Create the shard directory (e.g., ./data/shard0)
-    if err := os.MkdirAll(shardDir, 0755); err != nil {
-        log.Fatalf("failed to create shard directory: %v", err)
-    }
-
-    // Define the WAL file path INSIDE that shard directory
-    walFile := shardDir + "/wal.log"
+	shardDir, walFile, err := CreateDataDirectory(cfg.DataDir, shard.ID)
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	engine, err := storage.NewSSTableEngine(shardDir, walFile)
     if err != nil {
