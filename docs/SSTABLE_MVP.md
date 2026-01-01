@@ -62,12 +62,12 @@ cd .. && CGO_ENABLED=1 go build -o bigtablelite ./cmd/server
 
 ## Features
 
-✅ Memtable with automatic flushing at 1MB threshold  
-✅ SSTable file format with index for efficient lookups  
-✅ Binary search on index for O(log n) lookups  
-✅ Reads from memtable first, then SSTables (newest to oldest)  
-✅ Persistent storage on disk  
-✅ cgo integration with Go  
+Memtable with automatic flushing at 1MB threshold  
+SSTable file format with index for efficient lookups  
+Binary search on index for O(log n) lookups  
+Reads from memtable first, then SSTables (newest to oldest)  
+Persistent storage on disk  
+cgo integration with Go  
 
 ## Limitations (MVP)
 
