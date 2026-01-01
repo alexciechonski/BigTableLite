@@ -12,11 +12,17 @@ import (
 type BigTableLiteServer struct {
 	proto.UnimplementedBigTableLiteServer
 	engine *storage.SSTableEngine
+	producer *KafkaProducer
 	redis  *redis.Client
+	shardID int
 }
 
-func NewWithSSTable(engine *storage.SSTableEngine) *BigTableLiteServer {
-	return &BigTableLiteServer{engine: engine}
+func NewWithSSTable(engine *storage.SSTableEngine, producer *KafkaProducer, shardID int) *BigTableLiteServer {
+	return &BigTableLiteServer{
+        engine:   engine,
+        producer: producer,
+        shardID:  shardID,
+    }
 }
 
 func NewWithRedis(redis *redis.Client) *BigTableLiteServer {
@@ -33,6 +39,10 @@ func (s *BigTableLiteServer) Set(ctx context.Context, req *proto.SetRequest) (*p
 	} else {
 		err = s.engine.Put(req.Key, req.Value)
 	}
+
+	if s.producer != nil {
+        go s.producer.PublishEvent(s.shardID, "SET", req.Key, req.Value)
+    }
 
 	if err != nil {
 		IncError("Set")
