@@ -1,0 +1,14 @@
+shard0: 
+  - id: 0
+  - address: ":50051"
+shard1: 
+  - id: 1
+  - address: ":50051"
+shard2: 
+  - id: 2
+  - address: ":50051"
+shard3: 
+  - id: 3
+  - address: ":50051"
+
+

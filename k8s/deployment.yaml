@@ -1,11 +1,12 @@
 apiVersion: apps/v1
-kind: Deployment
+kind: StatefulSet
 metadata:
   name: bigtablelite
   labels:
     app: bigtablelite
 spec:
-  replicas: 1
+  serviceName: "bigtablelite" 
+  replicas: 4
   selector:
     matchLabels:
       app: bigtablelite
@@ -20,29 +21,42 @@ spec:
         image: bigtablelite:LATEST_BUILD
         imagePullPolicy: Never
         command: ["/bin/sh", "-c"]
-        args: ["cd /app && /app/bigtablelite"]
+        args: 
+          - |
+            # The hostname for pod 0 is 'bigtablelite-0'
+            SHARD_ID=${HOSTNAME##*-}
+            echo "Starting shard $SHARD_ID"
+            # Explicitly path the binary to ensure no command-not-found errors
+            /app/bigtablelite --shard-id=$SHARD_ID
         ports:
         - containerPort: 50051
           name: grpc
         - containerPort: 9090
           name: metrics
 
-        lifecycle:
-          preStop:
-            exec:
-              command: ["/bin/sh", "-c", "sleep 2"]
-
         env:
         - name: DATA_DIR
           value: "/data"
         - name: CONFIG_PATH
-          value: /etc/config/config.yml
+          value: "/etc/config/config.yml"
+        - name: SHARD_CONFIG_PATH
+          value: "/etc/config/shard-config.yaml"
+        # We also pass the standard ports as env vars just in case your ApplyEnv uses them
+        - name: GRPC_PORT
+          value: "50051"
+        - name: METRICS_PORT
+          value: "9090"
+        - name: HOSTNAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
 
         livenessProbe:
           httpGet:
             path: /metrics
-            port: 9090
-          initialDelaySeconds: 10
+            # Ensure this matches cfg.MetricsPort in main.go
+            port: metrics 
+          initialDelaySeconds: 15 # Increased to give CGO/SSTable time to init
           periodSeconds: 10
           timeoutSeconds: 5
           failureThreshold: 3
@@ -50,37 +64,20 @@ spec:
         readinessProbe:
           httpGet:
             path: /metrics
-            port: 9090
-          initialDelaySeconds: 5
+            port: metrics
+          initialDelaySeconds: 10
           periodSeconds: 5
-          timeoutSeconds: 3
-          failureThreshold: 3
 
         volumeMounts:
         - name: data
           mountPath: /data
-
-        # mounting config map
         - name: config-volume
           mountPath: /etc/config
           readOnly: true
-        # env:
-        #   - name: CONFIG_PATH
-        #     value: /etc/config/config.yml
-
-        resources:
-          requests:
-            memory: "128Mi"
-            cpu: "100m"
-          limits:
-            memory: "256Mi"
-            cpu: "200m"
 
       volumes:
       - name: data
-        emptyDir: {}
-      
-      # config volume
+        emptyDir: {} 
       - name: config-volume
         configMap:
           name: my-go-config

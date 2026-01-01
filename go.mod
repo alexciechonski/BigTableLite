@@ -4,6 +4,7 @@ go 1.24.0
 
 require (
 	github.com/go-redis/redismock/v9 v9.2.0
+	github.com/grpc-ecosystem/go-grpc-prometheus v1.2.0
 	github.com/prometheus/client_golang v1.23.2
 	github.com/redis/go-redis/v9 v9.17.0
 	google.golang.org/grpc v1.77.0

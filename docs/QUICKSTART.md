@@ -31,6 +31,7 @@ Local Development
 
     go run pkg/client/client.go -op set -key hello -value world
     go run pkg/client/client.go -op get -key hello
+    go run pkg/client/client.go -op delete -key hello
 
 6. Check Metrics
 
