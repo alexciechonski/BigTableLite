@@ -46,6 +46,8 @@ spec:
           value: "50051"
         - name: METRICS_PORT
           value: "9090"
+        - name: KAFKA_ADDRESS
+          value: "kafka-service:9092"
         - name: HOSTNAME
           valueFrom:
             fieldRef:
