@@ -44,8 +44,6 @@ func Load() (*Config, error) {
 
 	cfg.ApplyEnv()
 
-    fmt.Println("Final ShardConfigPath:", cfg.ShardConfigPath)
-
 	return cfg, nil
 }
 
