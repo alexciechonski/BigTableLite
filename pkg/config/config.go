@@ -17,6 +17,7 @@ type Config struct {
     RedisAddr       string `yaml:"redis_addr"`
     ShardCount      int    `yaml:"shard_count"`
     ShardConfigPath string `yaml:"shard_config_path"`
+    KafkaAddress    string `yaml:"kafka_address"`
 }
 
 func Load() (*Config, error) {
@@ -60,6 +61,7 @@ func (c *Config) ApplyEnv() {
     override("METRICS_PORT", &c.MetricsPort)
     override("REDIS_ADDR", &c.RedisAddr)
     override("SHARD_CONFIG_PATH", &c.ShardConfigPath)
+    override("KAFKA_ADDRESS", &c.KafkaAddress)
 
     if v, ok := os.LookupEnv("SHARD_COUNT"); ok {
         if i, err := strconv.Atoi(v); err == nil {
