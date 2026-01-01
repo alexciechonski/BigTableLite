@@ -21,7 +21,8 @@ var (
 )
 
 func init() {
-	prometheus.MustRegister(reqCount, latency)
+	prometheus.MustRegister(reqCount)
+    prometheus.MustRegister(latency)
 }
 
 func MetricsHandler() http.Handler {
