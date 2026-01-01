@@ -65,7 +65,9 @@ func main() {
         log.Fatal(err)
     }
 
-	handler := server.NewWithSSTable(engine)
+	kafkaProducer := server.NewKafkaProducer(cfg.KafkaAddress, "db-updates")
+
+	handler := server.NewWithSSTable(engine, kafkaProducer, *shardID)
 
 	grpcSrv := server.NewGRPCServer()
 	proto.RegisterBigTableLiteServer(grpcSrv, handler)
