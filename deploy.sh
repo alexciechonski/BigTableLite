@@ -41,7 +41,7 @@ if [[ -z "$SHARD_COUNT" ]]; then SHARD_COUNT=1; fi
 echo "Syncing Kubernetes replicas to shard_count: $SHARD_COUNT"
 
 # Wipe the old state to avoid port conflicts with old pods
-kubectl delete statefulset bigtablelite
+kubectl delete statefulset bigtablelite --ignore-not-found=true || true
 
 # CREATE CONFIGMAP
 kubectl create configmap my-go-config \
