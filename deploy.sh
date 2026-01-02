@@ -41,7 +41,7 @@ if [[ -z "$SHARD_COUNT" ]]; then SHARD_COUNT=1; fi
 echo "Syncing Kubernetes replicas to shard_count: $SHARD_COUNT"
 
 # Wipe the old state to avoid port conflicts with old pods
-kubectl delete statefulset bigtablelite
+kubectl delete statefulset bigtablelite --ignore-not-found=true || true
 
 # CREATE CONFIGMAP
 kubectl create configmap my-go-config \
@@ -53,6 +53,10 @@ kubectl create configmap my-go-config \
 echo "Updating deployment YAML with replicas ($SHARD_COUNT) and tag ($IMAGE_TAG)"
 sed "s/replicas: [0-9]*/replicas: $SHARD_COUNT/g" "$DEPLOY_FILE" | \
 sed "s|bigtablelite:LATEST_BUILD|$IMAGE_FULL_NAME|g" > "$TEMP_DEPLOY_FILE"
+
+echo "Deploying Kafka..."
+kubectl apply -f k8s/kafka-deployment.yaml
+kubectl wait --for=condition=ready pod -l app=kafka --timeout=120s
 
 echo "Deploying Redis..."
 kubectl apply -f k8s/redis-deployment.yaml
